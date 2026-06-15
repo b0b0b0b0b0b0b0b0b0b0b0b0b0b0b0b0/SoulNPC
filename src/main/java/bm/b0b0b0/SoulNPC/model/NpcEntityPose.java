@@ -29,9 +29,7 @@ public enum NpcEntityPose {
             CROUCHING,
             SITTING,
             SLEEPING,
-            SWIMMING,
-            SPIN_ATTACK,
-            FALL_FLYING
+            SWIMMING
     );
 
     public static NpcEntityPose fromString(String value) {

@@ -6,7 +6,6 @@ import bm.b0b0b0.SoulNPC.hologram.NpcTextLabels;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcLookAtService;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcViewerService;
-import bm.b0b0b0.SoulNPC.packet.PacketPlayerAppearance;
 import bm.b0b0b0.SoulNPC.repository.NpcRepository;
 import bm.b0b0b0.SoulNPC.util.NpcEntityIds;
 import org.bukkit.Bukkit;
@@ -103,6 +102,16 @@ public final class NpcSpawnService {
         hologramEntityIndex.put(entityId, normalize(npcId));
     }
 
+    public void registerEntityAliases(NpcRuntime runtime) {
+        NpcFileData data = runtime.data();
+        String npcId = normalize(data.id);
+        entityIndex.put(data.entityId, npcId);
+        var seat = runtime.playerSeat();
+        if (seat != null) {
+            entityIndex.put(seat.seatEntityId(), npcId);
+        }
+    }
+
     public void unregisterHologramEntity(int entityId) {
         hologramEntityIndex.remove(entityId);
     }
@@ -141,8 +150,8 @@ public final class NpcSpawnService {
                 runtime.packetMob().updateRotation(runtime.data().yaw, runtime.data().pitch);
                 animationService.onMobSpawned(runtime);
             } else if (runtime.packetNpc() != null) {
-                runtime.refreshPlayerSeat();
-                PacketPlayerAppearance.applyToViewers(runtime.packetNpc(), runtime.data().appearance);
+                viewerService.syncPlayerPose(runtime);
+                registerEntityAliases(runtime);
                 animationService.onMobSpawned(runtime);
             }
         });
@@ -196,8 +205,8 @@ public final class NpcSpawnService {
                     runtime.packetMob().updateRotation(runtime.data().yaw, runtime.data().pitch);
                     animationService.onMobSpawned(runtime);
                 } else if (runtime.packetNpc() != null) {
-                    runtime.refreshPlayerSeat();
-                    PacketPlayerAppearance.applyToViewers(runtime.packetNpc(), runtime.data().appearance);
+                    viewerService.syncPlayerPose(runtime);
+                    registerEntityAliases(runtime);
                     animationService.onMobSpawned(runtime);
                 }
             });
@@ -259,6 +268,7 @@ public final class NpcSpawnService {
                 runtime.packetMob().updateRotation(runtime.data().yaw, runtime.data().pitch);
             } else if (runtime.packetNpc() != null) {
                 viewerService.syncPlayerPose(runtime);
+                registerEntityAliases(runtime);
             }
             viewerService.showToNearbyPlayers(runtime);
         });

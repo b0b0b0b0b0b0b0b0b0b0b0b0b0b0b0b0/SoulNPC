@@ -62,14 +62,13 @@ public final class PacketNpcInteractListener extends PacketListenerAbstract {
     }
 
     private Optional<NpcRuntime> resolveRuntime(Player player, int entityId, NpcClickType clickType) {
-        Optional<NpcRuntime> runtime = spawnService.findByEntityId(entityId);
-        if (runtime.isPresent()) {
-            return runtime;
+        if (clickType != NpcClickType.LEFT && clickType != NpcClickType.SHIFT_LEFT) {
+            Optional<NpcRuntime> targeted = NpcInteractionRaycast.findTargeted(player, spawnService.runtimes());
+            if (targeted.isPresent()) {
+                return targeted;
+            }
         }
-        if (clickType == NpcClickType.LEFT || clickType == NpcClickType.SHIFT_LEFT) {
-            return Optional.empty();
-        }
-        return NpcInteractionRaycast.findTargeted(player, spawnService.runtimes());
+        return spawnService.findByEntityId(entityId);
     }
 
     private void dispatchClick(PacketReceiveEvent event, Player player, NpcRuntime runtime, NpcClickType clickType) {

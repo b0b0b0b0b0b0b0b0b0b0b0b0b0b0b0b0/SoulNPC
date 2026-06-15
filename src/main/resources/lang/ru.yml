@@ -124,7 +124,6 @@ gui:
       - "<gray>Клик — следующая поза"
       - "<gray>Сейчас: <white>{pose}</white>"
       - "<dark_gray>Shift — предыдущая</dark_gray>"
-      - "<dark_gray>Riptide: положи TRIDENT в main-hand</dark_gray>"
     pose:
       standing: "Стоя"
       crouching: "Присед"

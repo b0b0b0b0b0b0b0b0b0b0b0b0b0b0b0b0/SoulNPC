@@ -123,7 +123,6 @@ gui:
       - "<gray>Click — next pose"
       - "<gray>Current: <white>{pose}</white>"
       - "<dark_gray>Shift — previous</dark_gray>"
-      - "<dark_gray>Riptide: put TRIDENT in main-hand</dark_gray>"
     pose:
       standing: "Standing"
       crouching: "Crouch"

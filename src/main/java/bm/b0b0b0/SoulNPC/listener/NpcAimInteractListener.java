@@ -83,9 +83,6 @@ public final class NpcAimInteractListener implements Listener {
         }
         Player player = event.getPlayer();
         NpcInteractionRaycast.findTargeted(player, spawnService.runtimes()).ifPresent(runtime -> {
-            if (!runtime.data().appearance.isPacketMob()) {
-                return;
-            }
             event.setCancelled(true);
             interactionService.handleClick(
                     player,
