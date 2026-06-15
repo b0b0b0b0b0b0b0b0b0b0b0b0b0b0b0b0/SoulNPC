@@ -1,0 +1,42 @@
+name: SoulNPC
+version: '${version}'
+main: bm.b0b0b0.SoulNPC.soulNPC.SoulNPC
+api-version: '1.21'
+authors: [ b0b0b0 ]
+depend:
+  - packetevents
+softdepend:
+  - ViaVersion
+  - ViaBackwards
+  - ViaRewind
+  - Geyser-Spigot
+  - SkinsRestorer
+libraries:
+  - net.elytrium:serializer:1.1.1
+
+commands:
+  soulnpc:
+    description: SoulNPC administration
+    usage: /soulnpc <create|delete|edit|list|reload|tp|info|respawn> ...
+    aliases: [ snpc, npc ]
+    permission: soulnpc.admin
+
+permissions:
+  soulnpc.admin:
+    description: Full SoulNPC administration
+    default: op
+  soulnpc.use:
+    description: Interact with SoulNPC
+    default: true
+  soulnpc.bypass.cooldown:
+    description: Bypass interaction cooldown
+    default: op
+  soulnpc.create:
+    description: Create NPCs at your location
+    default: op
+  soulnpc.delete:
+    description: Delete NPCs
+    default: op
+  soulnpc.edit:
+    description: Open NPC editor GUI
+    default: op

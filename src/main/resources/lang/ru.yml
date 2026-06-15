@@ -1,0 +1,184 @@
+prefix: "<gradient:#7C3AED:#A855F7>SoulNPC</gradient> <dark_gray>»</dark_gray> "
+
+command:
+  no-permission: "<prefix><red>Недостаточно прав.</red>"
+  player-only: "<prefix><red>Только для игроков.</red>"
+  unknown-subcommand: "<prefix><red>Неизвестная подкоманда. <gray>/soulnpc help</gray></red>"
+  reload-success: "<prefix><green>Конфигурация и NPC перезагружены.</green>"
+  create-success: "<prefix><green>NPC <yellow><npc></yellow> создан (<gray><type></gray>).</green>"
+  create-exists: "<prefix><red>NPC <yellow><npc></yellow> уже существует.</red>"
+  invalid-type: "<prefix><red>Неизвестный тип. <gray>player</gray> или id моба (<gray>zombie</gray>, <gray>fox</gray>, …)</red>"
+  invalid-fox-variant: "<prefix><red>Неизвестный окрас лисы. Доступно: <gray>RED, SNOW</gray> (только с <gray>fox</gray>)</red>"
+  spawn-failed: "<prefix><red>NPC <yellow><npc></yellow> сохранён, но не появился в мире. Проверь Y-координату или <white>/soulnpc respawn <npc></white></red>"
+  respawn-success: "<prefix><green>NPC <yellow><npc></yellow> переспавнен.</green>"
+  delete-success: "<prefix><green>NPC <yellow><npc></yellow> удалён.</green>"
+  delete-missing: "<prefix><red>NPC <yellow><npc></yellow> не найден.</red>"
+  list-empty: "<prefix><gray>NPC не найдены.</gray>"
+  list-header: "<prefix><white>NPC (<count>):</white>"
+  list-entry: "<gray>•</gray> <yellow><npc></yellow> <dark_gray>(<world>, <x>, <y>, <z>)</dark_gray>"
+  tp-success: "<prefix><green>Телепорт к <yellow><npc></yellow>.</green>"
+  info-header: "<prefix><white>NPC <yellow><npc></yellow></white>"
+  info-line: "<gray><key>:</gray> <white><value></white>"
+  pose-copied: "<prefix><green>Поза скопирована в буфер.</green>"
+  pose-applied: "<prefix><green>Поза применена к <yellow><npc></yellow>.</green>"
+  invalid-id: "<prefix><red>ID может содержать только буквы, цифры, _ и -</red>"
+  skin-usage: "<prefix><gray>/soulnpc skin <npc> [имя_скина]</gray> — без имени копирует ваш скин (SkinRestorer)"
+  skin-success: "<prefix><green>Скин NPC <yellow><npc></yellow> → <white><profile></white></green>"
+  skin-not-player: "<prefix><red>У NPC <yellow><npc></yellow> тип MOB — скин только для player-модели.</red>"
+
+interaction:
+  no-permission: "<prefix><red>У вас нет доступа к этому NPC.</red>"
+  cooldown: "<prefix><yellow>Подождите перед следующим нажатием.</yellow>"
+  disabled: "<prefix><gray>Этот NPC временно недоступен.</gray>"
+
+gui:
+  state-on: "<green>Вкл</green>"
+  state-off: "<red>Выкл</red>"
+  admin-title: "<gradient:#7C3AED:#A855F7>SoulNPC</gradient> <dark_gray>—</dark_gray> <white>Редактор</white>"
+  edit-title: "<gradient:#7C3AED:#A855F7>SoulNPC</gradient> <dark_gray>—</dark_gray> <yellow><npc></yellow>"
+  reload-name: "<yellow>Перезагрузить</yellow>"
+  reload-lore:
+    - "<gray>Обновить все NPC"
+  reload-started: "<prefix><gray>Перезагрузка NPC...</gray>"
+  reload-done: "<prefix><green>NPC перезагружены.</green>"
+  npc-entry-name: "<yellow><npc></yellow>"
+  npc-entry-lore:
+    - "<gray>Тип: <white><type></white>"
+    - "<gray>Мир: <white><world></white>"
+    - "<gray>XYZ: <white><x> <y> <z></white>"
+    - "<gray>ЛКМ — телепорт"
+    - "<gray>ПКМ — редактировать"
+  page-prev-name: "<yellow>← Стр. <page>/<pages></yellow>"
+  page-prev-lore:
+    - "<gray>Предыдущая страница"
+  page-next-name: "<yellow>Стр. <page>/<pages> →</yellow>"
+  page-next-lore:
+    - "<gray>Следующая страница"
+  edit:
+    line-name-label: "Имя"
+    line-description-label: "Описание"
+    line-extra-label: "Линия {index}"
+    line-add-label: "Новая линия"
+    line-slot-name: "<aqua>Линия <line></aqua>"
+    line-slot-description: "<aqua>Линия <line></aqua>"
+    line-slot-extra: "<aqua>Линия <line></aqua>"
+    line-slot-add-name: "<green>+ Линия</green>"
+    line-slot-lore:
+      - "<gray>ЛКМ — изменить текст в чате"
+      - "<gray>Текст: <white>{text}</white>"
+    line-slot-add-lore:
+      - "<gray>ЛКМ — добавить строку в чате"
+    chat-prompt: "<prefix><gray>Введите текст для <yellow><line></yellow> в чат:"
+    chat-saved: "<prefix><green>Строка сохранена.</green>"
+    chat-cancelled: "<prefix><gray>Редактирование отменено.</gray>"
+    chat-cancel-button: "<click:run_command:'/soulnpc guicancel'><gray>[</gray><red>Отменить</red><gray>]</gray></click>"
+    offset-up-name: "<green>Выше</green>"
+    offset-up-lore:
+      - "<gray>Поднять голограмму"
+      - "<gray>Сейчас: <white>{value}</white>"
+      - "<dark_gray>Shift — шаг 0.25</dark_gray>"
+    offset-down-name: "<red>Ниже</red>"
+    offset-down-lore:
+      - "<gray>Опустить голограмму"
+      - "<gray>Сейчас: <white>{value}</white>"
+    spacing-up-name: "<aqua>Строки шире</aqua>"
+    spacing-up-lore:
+      - "<gray>Увеличить расстояние между строками"
+      - "<gray>Сейчас: <white>{value}</white>"
+    spacing-down-name: "<aqua>Строки ближе</aqua>"
+    spacing-down-lore:
+      - "<gray>Уменьшить расстояние между строками"
+      - "<gray>Сейчас: <white>{value}</white>"
+    scale-up-name: "<gold>Крупнее</gold>"
+    scale-up-lore:
+      - "<gray>Увеличить текст"
+      - "<gray>Сейчас: <white>{value}</white>"
+    scale-down-name: "<gold>Мельче</gold>"
+    scale-down-lore:
+      - "<gray>Уменьшить текст"
+      - "<gray>Сейчас: <white>{value}</white>"
+    see-through-name: "<light_purple>Сквозь стены: <state></light_purple>"
+    see-through-lore:
+      - "<gray>TextDisplay see-through"
+      - "<gray>Клик — переключить"
+    shadow-name: "<yellow>Тень: <state></yellow>"
+    shadow-lore:
+      - "<gray>Тень текста"
+    background-name: "<dark_gray>Фон: <state></dark_gray>"
+    background-lore:
+      - "<gray>Полупрозрачный фон строк"
+    text-display-name: "<green>TextDisplay: <state></green>"
+    text-display-lore:
+      - "<gray>Голограммы вместо ника над головой"
+    teleport-to-me-name: "<light_purple>Телепорт ко мне</light_purple>"
+    teleport-to-me-lore:
+      - "<gray>Поставить NPC на вашу позицию"
+      - "<dark_gray>Включая высоту — дерево, полёт и т.д.</dark_gray>"
+    teleport-to-me-done: "<prefix><green>NPC <yellow><npc></yellow> перемещён к вам.</green>"
+    look-at-name: "<aqua>Смотреть на игрока: <state></aqua>"
+    look-at-lore:
+      - "<gray>Поворачивает голову к ближайшему игроку"
+      - "<gray>Радиус: <white>32</white> блоков"
+    entity-pose-name: "<yellow>Поза: <pose></yellow>"
+    entity-pose-lore:
+      - "<gray>Клик — следующая поза"
+      - "<gray>Сейчас: <white>{pose}</white>"
+      - "<dark_gray>Shift — предыдущая</dark_gray>"
+      - "<dark_gray>Riptide: положи TRIDENT в main-hand</dark_gray>"
+    pose:
+      standing: "Стоя"
+      crouching: "Присед"
+      sitting: "Сидит"
+      sleeping: "Лежит"
+      swimming: "Плавание"
+      spin_attack: "Riptide"
+      fall_flying: "Элитры"
+    ground-items-name: "<gold>Предметы у ног: <state></gold>"
+    ground-items-lore:
+      - "<gray>Декоративные Item entity — волнами по count-per-wave"
+      - "<gray>materials в npc.yml — случайный из списка"
+    ground-items-offset-up-name: "<green>Точка выше</green>"
+    ground-items-offset-up-lore:
+      - "<gray>Поднять точку спавна от ног"
+      - "<gray>Сейчас: <white>{value}</white>"
+      - "<dark_gray>Shift — шаг 0.25</dark_gray>"
+    ground-items-offset-down-name: "<red>Точка ниже</red>"
+    ground-items-offset-down-lore:
+      - "<gray>Опустить точку спавна"
+      - "<gray>Сейчас: <white>{value}</white>"
+    ground-items-interval-faster-name: "<yellow>Чаще</yellow>"
+    ground-items-interval-faster-lore:
+      - "<gray>Меньше пауза между предметами"
+      - "<gray>Интервал: <white>{value}</white> тиков"
+    ground-items-interval-slower-name: "<yellow>Реже</yellow>"
+    ground-items-interval-slower-lore:
+      - "<gray>Больше пауза между предметами"
+      - "<gray>Интервал: <white>{value}</white> тиков"
+    ground-items-burst-name: "<light_purple>Тест-выброс</light_purple>"
+    ground-items-burst-lore:
+      - "<gray>Выбросить все предметы из списка сразу"
+    respawn-name: "<blue>Переспавн</blue>"
+    respawn-lore:
+      - "<gray>Обновить модель и голограммы"
+    delete-name: "<red>Удалить NPC</red>"
+    delete-lore:
+      - "<gray>Безвозвратно удалить"
+    back-name: "<gray>← Список NPC</gray>"
+    back-lore:
+      - "<gray>Вернуться в редактор"
+
+help:
+  - "<prefix><white>Команды SoulNPC:</white>"
+  - "<gray>/soulnpc create <id> [тип]</gray> — player, zombie, fox_snow (белая лиса), …"
+  - "<gray>/soulnpc delete <id></gray> — удалить"
+  - "<gray>/soulnpc edit</gray> — GUI редактора"
+  - "<gray>/soulnpc list</gray> — список NPC"
+  - "<gray>/soulnpc tp <id></gray> — телепорт"
+  - "<gray>/soulnpc info <id></gray> — информация"
+  - "<gray>/soulnpc pose copy|apply <id></gray> — позы"
+  - "<gray>/soulnpc respawn <id></gray> — переспавн"
+  - "<gray>/soulnpc skin <id> [скин]</gray> — скин NPC (SkinRestorer)"
+  - "<gray>Клики в npc.yml: ПКМ, ЛКМ, middle, shift-правый, shift-левый</gray>"
+  - "<gray>Префиксы: [message], [player], [console], [op]</gray>"
+  - "<gray>Мобы: type: MOB + entity-type; профили в NpcMobProfileRegistry</gray>"
+  - "<gray>Анимации player NPC: npc.yml → animation.type (SPIN_ATTACK, USE_MAIN_HAND, …)</gray>"

@@ -1,0 +1,183 @@
+prefix: "<gradient:#7C3AED:#A855F7>SoulNPC</gradient> <dark_gray>»</dark_gray> "
+
+command:
+  no-permission: "<prefix><red>Insufficient permissions.</red>"
+  player-only: "<prefix><red>Players only.</red>"
+  unknown-subcommand: "<prefix><red>Unknown subcommand. <gray>/soulnpc help</gray></red>"
+  reload-success: "<prefix><green>Configuration and NPCs reloaded.</green>"
+  create-success: "<prefix><green>NPC <yellow><npc></yellow> created (<gray><type></gray>).</green>"
+  create-exists: "<prefix><red>NPC <yellow><npc></yellow> already exists.</red>"
+  invalid-type: "<prefix><red>Unknown type. <gray>player</gray> or mob id (<gray>zombie</gray>, <gray>fox</gray>, …)</red>"
+  invalid-fox-variant: "<prefix><red>Unknown fox variant. Available: <gray>RED, SNOW</gray> (only with <gray>fox</gray>)</red>"
+  spawn-failed: "<prefix><red>NPC <yellow><npc></yellow> saved but failed to spawn. Check Y or <white>/soulnpc respawn <npc></white></red>"
+  respawn-success: "<prefix><green>NPC <yellow><npc></yellow> respawned.</green>"
+  delete-success: "<prefix><green>NPC <yellow><npc></yellow> deleted.</green>"
+  delete-missing: "<prefix><red>NPC <yellow><npc></yellow> not found.</red>"
+  list-empty: "<prefix><gray>No NPCs found.</gray>"
+  list-header: "<prefix><white>NPCs (<count>):</white>"
+  list-entry: "<gray>•</gray> <yellow><npc></yellow> <dark_gray>(<world>, <x>, <y>, <z>)</dark_gray>"
+  tp-success: "<prefix><green>Teleported to <yellow><npc></yellow>.</green>"
+  info-header: "<prefix><white>NPC <yellow><npc></yellow></white>"
+  info-line: "<gray><key>:</gray> <white><value></white>"
+  pose-copied: "<prefix><green>Pose copied to buffer.</green>"
+  pose-applied: "<prefix><green>Pose applied to <yellow><npc></yellow>.</green>"
+  invalid-id: "<prefix><red>ID may only contain letters, digits, _ and -</red>"
+  skin-usage: "<prefix><gray>/soulnpc skin <npc> [skin_name]</gray> — copies your skin if name omitted (SkinRestorer)"
+  skin-success: "<prefix><green>NPC <yellow><npc></yellow> skin → <white><profile></white></green>"
+  skin-not-player: "<prefix><red>NPC <yellow><npc></yellow> is MOB type — skin applies to player model only.</red>"
+
+interaction:
+  no-permission: "<prefix><red>You cannot interact with this NPC.</red>"
+  cooldown: "<prefix><yellow>Please wait before clicking again.</yellow>"
+  disabled: "<prefix><gray>This NPC is temporarily unavailable.</gray>"
+
+gui:
+  state-on: "<green>On</green>"
+  state-off: "<red>Off</red>"
+  admin-title: "<gradient:#7C3AED:#A855F7>SoulNPC</gradient> <dark_gray>—</dark_gray> <white>Editor</white>"
+  edit-title: "<gradient:#7C3AED:#A855F7>SoulNPC</gradient> <dark_gray>—</dark_gray> <yellow><npc></yellow>"
+  reload-name: "<yellow>Reload</yellow>"
+  reload-lore:
+    - "<gray>Refresh all NPCs"
+  reload-started: "<prefix><gray>Reloading NPCs...</gray>"
+  reload-done: "<prefix><green>NPCs reloaded.</green>"
+  npc-entry-name: "<yellow><npc></yellow>"
+  npc-entry-lore:
+    - "<gray>Type: <white><type></white>"
+    - "<gray>World: <white><world></white>"
+    - "<gray>XYZ: <white><x> <y> <z></white>"
+    - "<gray>LMB — teleport"
+    - "<gray>RMB — edit"
+  page-prev-name: "<yellow>← Page <page>/<pages></yellow>"
+  page-prev-lore:
+    - "<gray>Previous page"
+  page-next-name: "<yellow>Page <page>/<pages> →</yellow>"
+  page-next-lore:
+    - "<gray>Next page"
+  edit:
+    line-name-label: "Name"
+    line-description-label: "Description"
+    line-extra-label: "Line {index}"
+    line-add-label: "New line"
+    line-slot-name: "<aqua>Line <line></aqua>"
+    line-slot-description: "<aqua>Line <line></aqua>"
+    line-slot-extra: "<aqua>Line <line></aqua>"
+    line-slot-add-name: "<green>+ Line</green>"
+    line-slot-lore:
+      - "<gray>LMB — edit text in chat"
+      - "<gray>Text: <white>{text}</white>"
+    line-slot-add-lore:
+      - "<gray>LMB — add a line in chat"
+    chat-prompt: "<prefix><gray>Enter text for <yellow><line></yellow> in chat:"
+    chat-saved: "<prefix><green>Line saved.</green>"
+    chat-cancelled: "<prefix><gray>Edit cancelled.</gray>"
+    chat-cancel-button: "<click:run_command:'/soulnpc guicancel'><gray>[</gray><red>Cancel</red><gray>]</gray></click>"
+    offset-up-name: "<green>Higher</green>"
+    offset-up-lore:
+      - "<gray>Raise hologram"
+      - "<gray>Current: <white>{value}</white>"
+      - "<dark_gray>Shift — step 0.25</dark_gray>"
+    offset-down-name: "<red>Lower</red>"
+    offset-down-lore:
+      - "<gray>Lower hologram"
+      - "<gray>Current: <white>{value}</white>"
+    spacing-up-name: "<aqua>Wider spacing</aqua>"
+    spacing-up-lore:
+      - "<gray>Increase line gap"
+      - "<gray>Current: <white>{value}</white>"
+    spacing-down-name: "<aqua>Tighter spacing</aqua>"
+    spacing-down-lore:
+      - "<gray>Decrease line gap"
+      - "<gray>Current: <white>{value}</white>"
+    scale-up-name: "<gold>Larger text</gold>"
+    scale-up-lore:
+      - "<gray>Increase text scale"
+      - "<gray>Current: <white>{value}</white>"
+    scale-down-name: "<gold>Smaller text</gold>"
+    scale-down-lore:
+      - "<gray>Decrease text scale"
+      - "<gray>Current: <white>{value}</white>"
+    see-through-name: "<light_purple>See-through: <state></light_purple>"
+    see-through-lore:
+      - "<gray>Text visible through walls"
+    shadow-name: "<yellow>Shadow: <state></yellow>"
+    shadow-lore:
+      - "<gray>Text shadow"
+    background-name: "<dark_gray>Background: <state></dark_gray>"
+    background-lore:
+      - "<gray>Semi-transparent line background"
+    text-display-name: "<green>TextDisplay: <state></green>"
+    text-display-lore:
+      - "<gray>Hologram lines instead of nametag"
+    teleport-to-me-name: "<light_purple>Teleport to me</light_purple>"
+    teleport-to-me-lore:
+      - "<gray>Move NPC to your position"
+      - "<dark_gray>Exact Y — tree, flight, etc.</dark_gray>"
+    teleport-to-me-done: "<prefix><green>NPC <yellow><npc></yellow> moved to you.</green>"
+    look-at-name: "<aqua>Look at player: <state></aqua>"
+    look-at-lore:
+      - "<gray>Face the nearest player"
+      - "<gray>Range: <white>32</white> blocks"
+    entity-pose-name: "<yellow>Pose: <pose></yellow>"
+    entity-pose-lore:
+      - "<gray>Click — next pose"
+      - "<gray>Current: <white>{pose}</white>"
+      - "<dark_gray>Shift — previous</dark_gray>"
+      - "<dark_gray>Riptide: put TRIDENT in main-hand</dark_gray>"
+    pose:
+      standing: "Standing"
+      crouching: "Crouch"
+      sitting: "Sitting"
+      sleeping: "Sleeping"
+      swimming: "Swimming"
+      spin_attack: "Riptide"
+      fall_flying: "Elytra"
+    ground-items-name: "<gold>Ground items: <state></gold>"
+    ground-items-lore:
+      - "<gray>Decorative Item entities — scatter and despawn"
+      - "<gray>materials in npc.yml — random pick from list"
+    ground-items-offset-up-name: "<green>Higher spawn</green>"
+    ground-items-offset-up-lore:
+      - "<gray>Raise spawn point from feet"
+      - "<gray>Current: <white>{value}</white>"
+      - "<dark_gray>Shift — step 0.25</dark_gray>"
+    ground-items-offset-down-name: "<red>Lower spawn</red>"
+    ground-items-offset-down-lore:
+      - "<gray>Lower spawn point"
+      - "<gray>Current: <white>{value}</white>"
+    ground-items-interval-faster-name: "<yellow>Faster</yellow>"
+    ground-items-interval-faster-lore:
+      - "<gray>Shorter delay between items"
+      - "<gray>Interval: <white>{value}</white> ticks"
+    ground-items-interval-slower-name: "<yellow>Slower</yellow>"
+    ground-items-interval-slower-lore:
+      - "<gray>Longer delay between items"
+      - "<gray>Interval: <white>{value}</white> ticks"
+    ground-items-burst-name: "<light_purple>Test burst</light_purple>"
+    ground-items-burst-lore:
+      - "<gray>Spawn all items from the list at once"
+    respawn-name: "<blue>Respawn</blue>"
+    respawn-lore:
+      - "<gray>Refresh model and holograms"
+    delete-name: "<red>Delete NPC</red>"
+    delete-lore:
+      - "<gray>Permanently remove"
+    back-name: "<gray>← NPC list</gray>"
+    back-lore:
+      - "<gray>Back to editor"
+
+help:
+  - "<prefix><white>SoulNPC commands:</white>"
+  - "<gray>/soulnpc create <id> [type]</gray> — player, zombie, fox_snow (white fox), …"
+  - "<gray>/soulnpc delete <id></gray> — delete"
+  - "<gray>/soulnpc edit</gray> — editor GUI"
+  - "<gray>/soulnpc list</gray> — list NPCs"
+  - "<gray>/soulnpc tp <id></gray> — teleport"
+  - "<gray>/soulnpc info <id></gray> — info"
+  - "<gray>/soulnpc pose copy|apply <id></gray> — poses"
+  - "<gray>/soulnpc respawn <id></gray> — respawn"
+  - "<gray>/soulnpc skin <id> [skin]</gray> — NPC skin (SkinRestorer)"
+  - "<gray>Clicks in npc.yml: RMB, LMB, middle, shift-RMB, shift-LMB</gray>"
+  - "<gray>Prefixes: [message], [player], [console], [op]</gray>"
+  - "<gray>Mobs: type: MOB + entity-type; profiles in NpcMobProfileRegistry</gray>"
+  - "<gray>Player NPC animations: npc.yml → animation.type (SPIN_ATTACK, USE_MAIN_HAND, …)</gray>"
