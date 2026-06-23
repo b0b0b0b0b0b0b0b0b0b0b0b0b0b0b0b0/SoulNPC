@@ -13,6 +13,8 @@ import bm.b0b0b0.SoulNPC.model.NpcMobDisplayPose;
 import bm.b0b0b0.SoulNPC.repository.NpcRepository;
 import bm.b0b0b0.SoulNPC.service.NpcRuntime;
 import bm.b0b0b0.SoulNPC.service.NpcService;
+import bm.b0b0b0.SoulNPC.util.NpcInspectorStick;
+import bm.b0b0b0.SoulNPC.util.SoulNpcKeys;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -21,11 +23,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -39,6 +43,7 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
     private final SkinService skinService;
     private final AdminNpcMenuListener adminMenuListener;
     private final GuiChatInputService chatInputService;
+    private final SoulNpcKeys soulNpcKeys;
 
     public SoulNpcCommand(
             JavaPlugin plugin,
@@ -48,7 +53,8 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
             NpcService npcService,
             SkinService skinService,
             AdminNpcMenuListener adminMenuListener,
-            GuiChatInputService chatInputService
+            GuiChatInputService chatInputService,
+            SoulNpcKeys soulNpcKeys
     ) {
         this.plugin = plugin;
         this.pluginConfig = pluginConfig;
@@ -58,6 +64,7 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
         this.skinService = skinService;
         this.adminMenuListener = adminMenuListener;
         this.chatInputService = chatInputService;
+        this.soulNpcKeys = soulNpcKeys;
     }
 
     @Override
@@ -87,6 +94,7 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
             case "pose" -> handlePose(sender, args);
             case "respawn" -> handleRespawn(sender, args);
             case "skin" -> handleSkin(sender, args);
+            case "stick" -> handleStick(sender);
             case "guicancel" -> handleGuiCancel(sender);
             default -> {
                 sender.sendMessage(messageService.message(asPlayer(sender), "command.unknown-subcommand"));
@@ -230,20 +238,59 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
         }
         String id = args[1].toLowerCase(Locale.ROOT);
         if (repository.findById(id).isEmpty()) {
-            sender.sendMessage(messageService.message(player, "command.delete-missing", Placeholder.parsed("npc", id)));
+            sendNpcNotFound(sender, player, id);
             return true;
         }
-        String profile = args.length >= 3 ? args[2] : skinService.resolveProfileKeyForPlayer(player);
-        if (!npcService.setSkin(id, profile)) {
+        NpcFileData npcData = repository.findById(id).get();
+        if (!npcData.appearance.type.isPlayerModel()) {
             sender.sendMessage(messageService.message(player, "command.skin-not-player", Placeholder.parsed("npc", id)));
+            return true;
+        }
+        String profile = args.length >= 3
+                ? String.join(" ", Arrays.copyOfRange(args, 2, args.length)).trim()
+                : skinService.resolveProfileKeyForPlayer(player);
+        if (profile.isBlank()) {
+            sender.sendMessage(messageService.message(player, "command.skin-usage"));
             return true;
         }
         sender.sendMessage(messageService.message(
                 player,
-                "command.skin-success",
+                "command.skin-loading",
                 Placeholder.parsed("npc", id),
                 Placeholder.parsed("profile", profile)
         ));
+        if (!npcService.setSkin(id, profile, () -> player.sendMessage(messageService.message(
+                player,
+                "command.skin-success",
+                Placeholder.parsed("npc", id),
+                Placeholder.parsed("profile", profile)
+        )), error -> player.sendMessage(messageService.message(
+                player,
+                "command.skin-failed",
+                Placeholder.parsed("npc", id),
+                Placeholder.parsed("profile", profile),
+                Placeholder.parsed("reason", error.getMessage() == null ? "?" : error.getMessage())
+        )))) {
+            sender.sendMessage(messageService.message(player, "command.skin-failed", Placeholder.parsed("npc", id),
+                    Placeholder.parsed("profile", profile), Placeholder.parsed("reason", "respawn")));
+            return true;
+        }
+        return true;
+    }
+
+    private boolean handleStick(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(messageService.message(null, "command.player-only"));
+            return true;
+        }
+        if (!checkPermission(sender, pluginConfig.settings().permissions.admin)) {
+            return true;
+        }
+        ItemStack stick = NpcInspectorStick.create(messageService, player, soulNpcKeys);
+        player.getInventory().addItem(stick).values().forEach(overflow ->
+                player.getWorld().dropItemNaturally(player.getLocation(), overflow)
+        );
+        sender.sendMessage(messageService.message(player, "command.stick-given"));
         return true;
     }
 
@@ -383,6 +430,11 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
+    private void sendNpcNotFound(CommandSender sender, Player player, String id) {
+        sender.sendMessage(messageService.message(player, "command.delete-missing", Placeholder.parsed("npc", id)));
+        sender.sendMessage(messageService.message(player, "command.npc-not-found-hint"));
+    }
+
     private static Player asPlayer(CommandSender sender) {
         return sender instanceof Player player ? player : null;
     }
@@ -409,7 +461,7 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 1) {
-            return filter(args[0], "help", "reload", "list", "create", "delete", "edit", "tp", "info", "pose", "respawn", "skin");
+            return filter(args[0], "help", "reload", "list", "create", "delete", "edit", "tp", "info", "pose", "respawn", "skin", "stick");
         }
         if (args.length == 2) {
             String sub = args[0].toLowerCase(Locale.ROOT);
@@ -433,6 +485,13 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
                 ids.add(data.id);
             }
             return filter(args[2], ids.toArray(String[]::new));
+        }
+        if (args.length == 3 && "skin".equalsIgnoreCase(args[0])) {
+            List<String> names = new ArrayList<>();
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                names.add(online.getName());
+            }
+            return filter(args[2], names.toArray(String[]::new));
         }
         return List.of();
     }

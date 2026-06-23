@@ -183,6 +183,10 @@ public final class NpcSpawnService {
     }
 
     public boolean respawn(String id) {
+        return respawn(id, null, null);
+    }
+
+    public boolean respawn(String id, Runnable onProfileReady, java.util.function.Consumer<Throwable> onProfileError) {
         Optional<NpcRuntime> optional = findRuntime(id);
         if (optional.isPresent()) {
             NpcRuntime runtime = optional.get();
@@ -209,7 +213,10 @@ public final class NpcSpawnService {
                     registerEntityAliases(runtime);
                     animationService.onMobSpawned(runtime);
                 }
-            });
+                if (onProfileReady != null) {
+                    onProfileReady.run();
+                }
+            }, onProfileError);
             return true;
         }
         Optional<NpcFileData> data = repository.findById(id);

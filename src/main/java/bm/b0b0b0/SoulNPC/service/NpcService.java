@@ -11,6 +11,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public final class NpcService {
 
@@ -161,6 +162,10 @@ public final class NpcService {
     }
 
     public boolean setSkin(String id, String profile) {
+        return setSkin(id, profile, null, null);
+    }
+
+    public boolean setSkin(String id, String profile, Runnable onReady, Consumer<Throwable> onError) {
         Optional<NpcFileData> optional = repository.findById(id);
         if (optional.isEmpty()) {
             return false;
@@ -171,7 +176,7 @@ public final class NpcService {
         }
         data.appearance.profile = profile == null ? "" : profile.trim();
         repository.save(data);
-        return spawnService.respawn(id);
+        return spawnService.respawn(id, onReady, onError);
     }
 
     public NpcPoseData poseBuffer() {

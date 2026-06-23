@@ -10,6 +10,7 @@ import bm.b0b0b0.SoulNPC.gui.GuiChatInputService;
 import bm.b0b0b0.SoulNPC.lang.MessageService;
 import bm.b0b0b0.SoulNPC.hologram.NpcTextLabels;
 import bm.b0b0b0.SoulNPC.listener.GuiChatInputListener;
+import bm.b0b0b0.SoulNPC.listener.NpcInspectorListener;
 import bm.b0b0b0.SoulNPC.listener.NpcAimInteractListener;
 import bm.b0b0b0.SoulNPC.listener.NpcGroundItemListener;
 import bm.b0b0b0.SoulNPC.listener.NpcHologramListener;
@@ -94,7 +95,7 @@ public final class SoulNPC extends JavaPlugin {
         );
         textLabels.bind(spawnService);
         NpcInteractionService interactionService = new NpcInteractionService(this, pluginConfig, messageService);
-        npcService = new NpcService(npcRepository, spawnService, new NpcDefaultsFactory());
+        npcService = new NpcService(npcRepository, spawnService, new NpcDefaultsFactory(pluginConfig));
 
         spawnService.reloadAll();
         spawnService.start();
@@ -125,7 +126,8 @@ public final class SoulNPC extends JavaPlugin {
                 npcService,
                 skinService,
                 adminMenuListener,
-                chatInputService
+                chatInputService,
+                soulNpcKeys
         );
 
         getServer().getPluginManager().registerEvents(new PlayerNpcLifecycleListener(spawnService), this);
@@ -133,6 +135,10 @@ public final class SoulNPC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new NpcGroundItemListener(groundItemEffectService), this);
         getServer().getPluginManager().registerEvents(adminMenuListener, this);
         getServer().getPluginManager().registerEvents(new GuiChatInputListener(this, chatInputService), this);
+        getServer().getPluginManager().registerEvents(
+                new NpcInspectorListener(spawnService, messageService, soulNpcKeys),
+                this
+        );
         getServer().getPluginManager().registerEvents(
                 new NpcAimInteractListener(spawnService, interactionService, textLabels, soulNpcKeys),
                 this

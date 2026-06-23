@@ -5,6 +5,7 @@ import bm.b0b0b0.SoulNPC.model.NpcClickType;
 import bm.b0b0b0.SoulNPC.service.NpcInteractionService;
 import bm.b0b0b0.SoulNPC.service.NpcRuntime;
 import bm.b0b0b0.SoulNPC.service.NpcSpawnService;
+import bm.b0b0b0.SoulNPC.util.NpcInspectorStick;
 import bm.b0b0b0.SoulNPC.util.NpcInteractionRaycast;
 import bm.b0b0b0.SoulNPC.util.SoulNpcKeys;
 import org.bukkit.entity.Entity;
@@ -48,6 +49,9 @@ public final class NpcAimInteractListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
+        if (NpcInspectorStick.isHoldingInspectorStick(player, keys)) {
+            return;
+        }
         NpcInteractionRaycast.findTargeted(player, spawnService.runtimes()).ifPresent(runtime ->
                 interactionService.handleClick(
                         player,
@@ -60,6 +64,10 @@ public final class NpcAimInteractListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onDamageByEntity(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player player)) {
+            return;
+        }
+        if (NpcInspectorStick.isHoldingInspectorStick(player, keys)) {
+            event.setCancelled(true);
             return;
         }
         resolveRuntime(event.getEntity()).ifPresent(runtime -> {
@@ -82,6 +90,9 @@ public final class NpcAimInteractListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
+        if (NpcInspectorStick.isHoldingInspectorStick(player, keys)) {
+            return;
+        }
         NpcInteractionRaycast.findTargeted(player, spawnService.runtimes()).ifPresent(runtime -> {
             event.setCancelled(true);
             interactionService.handleClick(
@@ -99,6 +110,9 @@ public final class NpcAimInteractListener implements Listener {
         }
         event.setCancelled(true);
         Player player = event.getPlayer();
+        if (NpcInspectorStick.isHoldingInspectorStick(player, keys)) {
+            return;
+        }
         resolveRuntime(event.getRightClicked()).ifPresent(runtime -> {
             if (runtime.data().appearance.isPacketMob()
                     && NpcInteractionRaycast.findTargeted(player, java.util.List.of(runtime)).isEmpty()) {

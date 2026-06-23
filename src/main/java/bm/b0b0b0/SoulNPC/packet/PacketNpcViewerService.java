@@ -38,6 +38,10 @@ public final class PacketNpcViewerService {
     }
 
     public void prepareProfile(NpcRuntime runtime, Runnable onReady) {
+        prepareProfile(runtime, onReady, null);
+    }
+
+    public void prepareProfile(NpcRuntime runtime, Runnable onReady, java.util.function.Consumer<Throwable> onError) {
         NpcFileData data = runtime.data();
         if (data.appearance.isPacketMob()) {
             var packetType = PacketMobNpc.resolveEntityType(data.appearance);
@@ -77,7 +81,12 @@ public final class PacketNpcViewerService {
             if (onReady != null) {
                 onReady.run();
             }
-        }), error -> plugin.getLogger().warning("[SoulNPC] Skin for " + data.id + ": " + error.getMessage()));
+        }), error -> {
+            plugin.getLogger().warning("[SoulNPC] Skin for " + data.id + ": " + error.getMessage());
+            if (onError != null) {
+                plugin.getServer().getScheduler().runTask(plugin, () -> onError.accept(error));
+            }
+        });
     }
 
     public void tick(Collection<NpcRuntime> runtimes) {

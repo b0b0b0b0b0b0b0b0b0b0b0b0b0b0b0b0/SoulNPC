@@ -17,7 +17,7 @@ libraries:
 commands:
   soulnpc:
     description: SoulNPC administration
-    usage: /soulnpc <create|delete|edit|list|reload|tp|info|respawn> ...
+    usage: /soulnpc <create|delete|edit|list|reload|tp|info|respawn|skin|stick> ...
     aliases: [ snpc, npc ]
     permission: soulnpc.admin
 

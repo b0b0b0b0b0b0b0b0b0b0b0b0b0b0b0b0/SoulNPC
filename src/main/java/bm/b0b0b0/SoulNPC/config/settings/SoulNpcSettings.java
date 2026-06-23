@@ -31,8 +31,26 @@ public final class SoulNpcSettings extends YamlSerializable {
     })
     public Appearance appearance = new Appearance();
 
+    @NewLine
+    @Comment(value = {
+            @CommentValue(" Дефолты новых NPC (/soulnpc create)")
+    })
+    public NpcDefaults npcDefaults = new NpcDefaults();
+
     public SoulNpcSettings() {
         super(SoulNpcSerializerConfig.INSTANCE);
+    }
+
+    public static final class NpcDefaults {
+        @Comment(value = {
+                @CommentValue(" GREET: приседание/кивок при приближении игрока (player-NPC)")
+        })
+        public boolean greetAnimation = false;
+
+        @Comment(value = {
+                @CommentValue(" Смотреть на ближайшего игрока у новых player-NPC")
+        })
+        public boolean lookAtPlayers = false;
     }
 
     public static final class General {

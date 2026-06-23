@@ -8,10 +8,12 @@ public final class SoulNpcKeys {
     public final NamespacedKey npcId;
     public final NamespacedKey entityRole;
     public final NamespacedKey groundItem;
+    public final NamespacedKey inspectorStick;
 
     public SoulNpcKeys(Plugin plugin) {
         this.npcId = new NamespacedKey(plugin, "npc-id");
         this.entityRole = new NamespacedKey(plugin, "entity-role");
         this.groundItem = new NamespacedKey(plugin, "ground-item");
+        this.inspectorStick = new NamespacedKey(plugin, "inspector-stick");
     }
 }

@@ -11,7 +11,7 @@ public final class NpcAnimationData {
     @Comment(value = {
             @CommentValue(" Включить анимацию")
     })
-    public boolean enabled = true;
+    public boolean enabled = false;
 
     @Comment(value = {
             @CommentValue(" Тип: NONE, SWING_ARM, SWING_OFF_HAND, WAVE, GREET, BOW, IDLE_SWAY, CUSTOM, MOB_POSE"),
@@ -19,7 +19,7 @@ public final class NpcAnimationData {
             @CommentValue(" Позы: SPIN_ATTACK (riptide/трезубец), FALL_FLYING, CROUCH, SLEEP, SWIM"),
             @CommentValue(" Руки: USE_MAIN_HAND (зарядка), USE_OFF_HAND; алиасы: TRIDENT, RIPTIDE, TRIDENT_CHARGE")
     })
-    public NpcAnimationType type = NpcAnimationType.GREET;
+    public NpcAnimationType type = NpcAnimationType.NONE;
 
     @Comment(value = {
             @CommentValue(" Интервал между кадрами анимации (тики)")

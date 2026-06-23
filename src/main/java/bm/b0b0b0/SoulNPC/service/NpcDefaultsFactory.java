@@ -1,5 +1,6 @@
 package bm.b0b0b0.SoulNPC.service;
 
+import bm.b0b0b0.SoulNPC.config.PluginConfig;
 import bm.b0b0b0.SoulNPC.mob.NpcEntityTypeResolver;
 import bm.b0b0b0.SoulNPC.mob.NpcMobProfile;
 import bm.b0b0b0.SoulNPC.mob.NpcMobProfileRegistry;
@@ -18,6 +19,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class NpcDefaultsFactory {
+
+    private final PluginConfig pluginConfig;
+
+    public NpcDefaultsFactory(PluginConfig pluginConfig) {
+        this.pluginConfig = pluginConfig;
+    }
 
     public NpcFileData createFromPlayer(Player player, String id) {
         return createFromPlayer(player, id, NpcDisplayType.PLAYER);
@@ -64,7 +71,7 @@ public final class NpcDefaultsFactory {
         return data;
     }
 
-    private static void applyDisplayType(
+    private void applyDisplayType(
             NpcFileData data,
             NpcDisplayType type,
             String entityType,
@@ -73,7 +80,7 @@ public final class NpcDefaultsFactory {
         if (type == null || type.isPlayerModel()) {
             data.appearance.type = NpcDisplayType.PLAYER;
             data.appearance.entityType = "";
-            applyPlayerDefaults(data);
+            applyPlayerDefaults(data, pluginConfig);
             return;
         }
 
@@ -81,7 +88,7 @@ public final class NpcDefaultsFactory {
         if (resolvedEntity == null) {
             data.appearance.type = NpcDisplayType.PLAYER;
             data.appearance.entityType = "";
-            applyPlayerDefaults(data);
+            applyPlayerDefaults(data, pluginConfig);
             return;
         }
 
@@ -128,9 +135,15 @@ public final class NpcDefaultsFactory {
         };
     }
 
-    private static void applyPlayerDefaults(NpcFileData data) {
-        data.lookAtPlayers = true;
+    private static void applyPlayerDefaults(NpcFileData data, PluginConfig pluginConfig) {
+        var defaults = pluginConfig.settings().npcDefaults;
+        data.lookAtPlayers = defaults.lookAtPlayers;
         data.lookAtRange = 12;
+        if (!defaults.greetAnimation) {
+            data.animation.enabled = false;
+            data.animation.type = NpcAnimationType.NONE;
+            return;
+        }
         data.animation.enabled = true;
         data.animation.type = NpcAnimationType.GREET;
         data.animation.greetRange = 8;
