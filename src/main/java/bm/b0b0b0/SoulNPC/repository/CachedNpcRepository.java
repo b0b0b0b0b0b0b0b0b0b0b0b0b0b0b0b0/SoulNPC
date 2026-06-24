@@ -2,6 +2,7 @@ package bm.b0b0b0.SoulNPC.repository;
 
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
 import bm.b0b0b0.SoulNPC.storage.NpcStorageBackend;
+import bm.b0b0b0.SoulNPC.util.NpcIdValidator;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -42,7 +43,7 @@ public final class CachedNpcRepository implements NpcRepository {
 
     @Override
     public Optional<NpcFileData> findById(String id) {
-        return Optional.ofNullable(cache.get(normalizeId(id)));
+        return Optional.ofNullable(cache.get(NpcIdValidator.canonicalKey(id)));
     }
 
     @Override
@@ -56,10 +57,10 @@ public final class CachedNpcRepository implements NpcRepository {
 
     @Override
     public void save(NpcFileData data) {
-        String id = normalizeId(data.id);
+        String id = NpcIdValidator.normalize(data.id);
         data.id = id;
         data.prepareForYamlSave();
-        cache.put(id, data);
+        cache.put(NpcIdValidator.canonicalKey(id), data);
         backend.save(id, data).exceptionally(error -> {
             plugin.getLogger().warning("Failed to persist NPC " + id + ": " + error.getMessage());
             return null;
@@ -68,13 +69,13 @@ public final class CachedNpcRepository implements NpcRepository {
 
     @Override
     public void delete(String id) {
-        String normalized = normalizeId(id);
-        if (!cache.containsKey(normalized)) {
+        String key = NpcIdValidator.canonicalKey(id);
+        NpcFileData removed = cache.remove(key);
+        if (removed == null) {
             return;
         }
-        cache.remove(normalized);
-        backend.delete(normalized).exceptionally(error -> {
-            plugin.getLogger().warning("Failed to delete NPC " + normalized + ": " + error.getMessage());
+        backend.delete(removed.id).exceptionally(error -> {
+            plugin.getLogger().warning("Failed to delete NPC " + removed.id + ": " + error.getMessage());
             return null;
         });
     }
@@ -112,9 +113,5 @@ public final class CachedNpcRepository implements NpcRepository {
 
     public NpcStorageBackend backend() {
         return backend;
-    }
-
-    private static String normalizeId(String id) {
-        return id.toLowerCase();
     }
 }

@@ -24,6 +24,10 @@ public final class NpcIdValidator {
     }
 
     public static String normalize(String id) {
-        return id == null ? "" : id.trim().toLowerCase(Locale.ROOT);
+        return id == null ? "" : id.trim();
+    }
+
+    public static String canonicalKey(String id) {
+        return normalize(id).toLowerCase(Locale.ROOT);
     }
 }

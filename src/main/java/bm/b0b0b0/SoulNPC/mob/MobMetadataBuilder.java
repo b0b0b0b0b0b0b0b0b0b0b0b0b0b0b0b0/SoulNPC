@@ -40,9 +40,7 @@ public final class MobMetadataBuilder {
     public static List<EntityData<?>> build(NpcAppearanceData appearance, NpcMobProfile profile) {
         List<EntityData<?>> metadata = new ArrayList<>(4);
         byte flags = entityFlags(appearance);
-        if (flags != 0) {
-            metadata.add(new EntityData<>(FLAGS_INDEX, EntityDataTypes.BYTE, flags));
-        }
+        metadata.add(new EntityData<>(FLAGS_INDEX, EntityDataTypes.BYTE, flags));
         if (appearance.noGravity) {
             metadata.add(new EntityData<>(NO_GRAVITY_INDEX, EntityDataTypes.BOOLEAN, true));
         }

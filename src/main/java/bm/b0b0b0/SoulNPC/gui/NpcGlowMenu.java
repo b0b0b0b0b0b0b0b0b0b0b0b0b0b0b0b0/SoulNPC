@@ -6,6 +6,8 @@ import bm.b0b0b0.SoulNPC.model.NpcAppearanceData;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
@@ -40,6 +42,7 @@ public final class NpcGlowMenu extends AbstractNpcEditMenu {
             return;
         }
         int slot = click.slot();
+
         if (slot == layout.backSlot) {
             menus().openEdit(player, npcId);
             return;
@@ -48,10 +51,7 @@ public final class NpcGlowMenu extends AbstractNpcEditMenu {
         NpcAppearanceData appearance = data.appearance;
         boolean changed = false;
 
-        if (slot == layout.toggleSlot) {
-            appearance.glow = !appearance.glow;
-            changed = true;
-        } else if (slot == layout.disableSlot) {
+        if (slot == layout.disableSlot) {
             appearance.glow = false;
             changed = true;
         } else if (colorSlotIds.containsKey(slot)) {
@@ -60,12 +60,14 @@ public final class NpcGlowMenu extends AbstractNpcEditMenu {
             changed = true;
         }
 
-        if (changed) {
-            appearance.normalizePresentation();
-            repository().save(data);
-            npcService().refreshGlow(npcId);
-            render(player);
+        if (!changed) {
+            return;
         }
+
+        appearance.normalizePresentation();
+        repository().save(data);
+        npcService().refreshGlow(npcId);
+        Bukkit.getScheduler().runTask(deps.plugin(), () -> render(player));
     }
 
     @Override
@@ -80,9 +82,8 @@ public final class NpcGlowMenu extends AbstractNpcEditMenu {
         NpcAppearanceData appearance = data.appearance;
         appearance.normalizePresentation();
 
-        fillPane(layout.size, GuiMenuItems.pane());
+        fillPane(layout.size, fillerPane(layout.fillerMaterial));
 
-        inventory.setItem(layout.toggleSlot, toggleItem(player, appearance));
         inventory.setItem(layout.disableSlot, disableItem(player, appearance));
         inventory.setItem(layout.backSlot, GuiMenuItems.back(messageService(), player, layout.backMaterial));
 
@@ -94,32 +95,6 @@ public final class NpcGlowMenu extends AbstractNpcEditMenu {
             colorSlotIds.put(slot, option.id());
             inventory.setItem(slot, colorItem(player, option, appearance));
         }
-    }
-
-    private ItemStack toggleItem(Player player, NpcAppearanceData appearance) {
-        GuiNpcEditSettings.GlowLayout layout = pluginConfig().guiNpcEdit().glowMenu;
-        ItemStack item = new ItemStack(layout.toggleMaterial);
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return item;
-        }
-        meta.displayName(messageService().message(
-                player,
-                "gui.glow.toggle-name",
-                Placeholder.component(
-                        "state",
-                        messageService().message(player, appearance.glow ? "gui.state-on" : "gui.state-off")
-                )
-        ));
-        List<Component> lore = new ArrayList<>();
-        GuiMenuItems.appendToggleLore(messageService(), player, lore, "gui.glow.toggle-lore", appearance.glow);
-        lore.add(messageService().raw(GuiMenuItems.bracesToMiniMessage(
-                messageService().plain(player, "gui.glow.current-color-line")
-                        .replace("{color}", colorLabel(player, appearance.glowColor))
-        )));
-        meta.lore(lore);
-        item.setItemMeta(meta);
-        return item;
     }
 
     private ItemStack disableItem(Player player, NpcAppearanceData appearance) {
@@ -170,8 +145,7 @@ public final class NpcGlowMenu extends AbstractNpcEditMenu {
 
     private Component colorDisplayName(Player player, NpcGlowColors.Option option) {
         String label = colorLabel(player, option.id());
-        String tag = option.id();
-        return messageService().raw("<" + tag + ">▸ " + label + "</" + tag + ">");
+        return messageService().raw("<white>▸ " + label + "</white>");
     }
 
     private String colorLabel(Player player, String colorId) {
@@ -181,5 +155,15 @@ public final class NpcGlowMenu extends AbstractNpcEditMenu {
             return colorId;
         }
         return label;
+    }
+
+    private static ItemStack fillerPane(Material material) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(Component.empty());
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 }

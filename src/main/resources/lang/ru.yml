@@ -36,7 +36,7 @@ command:
   info-line: "<gray><key>:</gray> <white><value></white>"
   pose-copied: "<prefix><green>Поза скопирована в буфер.</green>"
   pose-applied: "<prefix><green>Поза применена к <yellow><npc></yellow>.</green>"
-  invalid-id: "<prefix><red>Неверный ID (a-z, 0-9, _, -, до 32 символов). Без ID: <cmd:'/soulnpc create'> — номер сам</red>"
+  invalid-id: "<prefix><red>Неверный ID (a-z, A-Z, 0-9, _, -, до 32 символов). Без ID: <cmd:'/soulnpc create'> — номер сам</red>"
   skin-usage: "<prefix><cmd:'/soulnpc skin <id> <ник>':gray> · <cmd:'/soulnpc skin <id> url <url>':gray> · <cmd:'/soulnpc skin <id> file <имя>':gray> · без скина — ваш текущий"
   skin-url-usage: "<prefix><gray>/soulnpc skin <id> url <url></gray>"
   skin-file-usage: "<prefix><gray>/soulnpc skin <id> file <файл в skins/></gray>"
@@ -496,7 +496,7 @@ gui:
 
 help:
   - "<prefix><white>Команды SoulNPC:</white>"
-  - "<cmd:'/soulnpc create [id] [тип]':gray> — без id: 1, 2, 3…; тип: player, zombie, fox_snow…"
+  - "<cmd:'/soulnpc create [id] [тип] [s- <ник>]':gray> — без id: 1, 2, 3…; скин: <cmd:'/soulnpc create s- Ник'>"
   - "<cmd:'/soulnpc delete <id>':gray> — удалить"
   - "<cmd:'/soulnpc edit':gray> — GUI редактора"
   - "<cmd:'/soulnpc list':gray> — список NPC"

@@ -11,6 +11,7 @@ import bm.b0b0b0.SoulNPC.model.NpcFileData;
 import bm.b0b0b0.SoulNPC.model.NpcMobDisplayPose;
 import bm.b0b0b0.SoulNPC.model.NpcGreetStyle;
 import bm.b0b0b0.SoulNPC.model.NpcMobPoseMode;
+import bm.b0b0b0.SoulNPC.model.NpcSkinSource;
 import bm.b0b0b0.SoulNPC.util.NpcLocationUtil;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -50,6 +51,17 @@ public final class NpcDefaultsFactory {
             String entityType,
             NpcMobDisplayPose mobDisplayPose
     ) {
+        return createFromPlayer(player, id, type, entityType, mobDisplayPose, null);
+    }
+
+    public NpcFileData createFromPlayer(
+            Player player,
+            String id,
+            NpcDisplayType type,
+            String entityType,
+            NpcMobDisplayPose mobDisplayPose,
+            String skinProfile
+    ) {
         Location location = NpcLocationUtil.createAtPlayer(player);
         NpcFileData data = new NpcFileData(id);
         data.world = location.getWorld().getName();
@@ -62,7 +74,12 @@ public final class NpcDefaultsFactory {
         data.appearance.useTextDisplay = true;
         data.appearance.noGravity = true;
         data.appearance.name = "<gradient:#7C3AED:#A855F7>" + id + "</gradient>";
-        data.appearance.profile = player.getName();
+        if (skinProfile != null && !skinProfile.isBlank()) {
+            data.appearance.profile = skinProfile.trim();
+            data.appearance.skinSource = NpcSkinSource.NICK;
+        } else {
+            data.appearance.profile = player.getName();
+        }
 
         applyDisplayType(data, type, entityType, mobDisplayPose);
 

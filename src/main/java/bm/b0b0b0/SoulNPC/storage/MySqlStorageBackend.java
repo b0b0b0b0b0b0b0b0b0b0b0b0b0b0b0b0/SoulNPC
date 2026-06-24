@@ -2,6 +2,7 @@ package bm.b0b0b0.SoulNPC.storage;
 
 import bm.b0b0b0.SoulNPC.config.settings.SoulNpcSettings;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
+import bm.b0b0b0.SoulNPC.util.NpcIdValidator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -54,7 +55,7 @@ public final class MySqlStorageBackend implements NpcStorageBackend {
                     String payload = resultSet.getString("payload");
                     try {
                         NpcFileData data = NpcPayloadCodec.decode(payload, id);
-                        result.put(normalizeId(data.id), data);
+                        result.put(NpcIdValidator.canonicalKey(data.id), data);
                     } catch (Exception exception) {
                         plugin.getLogger().warning("Failed to decode NPC " + id + ": " + exception.getMessage());
                     }
@@ -69,8 +70,13 @@ public final class MySqlStorageBackend implements NpcStorageBackend {
     @Override
     public CompletableFuture<Void> save(String id, NpcFileData data) {
         return CompletableFuture.runAsync(() -> {
-            String normalized = normalizeId(id);
-            data.id = normalized;
+            String storedId = NpcIdValidator.normalize(id);
+            if (data.id == null || data.id.isBlank()) {
+                data.id = storedId;
+            } else {
+                data.id = NpcIdValidator.normalize(data.id);
+            }
+            String key = NpcIdValidator.canonicalKey(data.id);
             try {
                 String payload = NpcPayloadCodec.encode(data);
                 try (Connection connection = dataSource.getConnection();
@@ -79,13 +85,13 @@ public final class MySqlStorageBackend implements NpcStorageBackend {
                              VALUES (?, ?, ?)
                              ON DUPLICATE KEY UPDATE payload = VALUES(payload), updated_at = VALUES(updated_at)
                              """)) {
-                    statement.setString(1, normalized);
+                    statement.setString(1, key);
                     statement.setString(2, payload);
                     statement.setLong(3, System.currentTimeMillis());
                     statement.executeUpdate();
                 }
             } catch (Exception exception) {
-                throw new IllegalStateException("Failed to save NPC " + normalized + ": " + exception.getMessage(),
+                throw new IllegalStateException("Failed to save NPC " + data.id + ": " + exception.getMessage(),
                         exception);
             }
         }, executor);
@@ -97,7 +103,7 @@ public final class MySqlStorageBackend implements NpcStorageBackend {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement statement = connection.prepareStatement(
                          "DELETE FROM soulnpc_npcs WHERE id = ?")) {
-                statement.setString(1, normalizeId(id));
+                statement.setString(1, NpcIdValidator.canonicalKey(id));
                 statement.executeUpdate();
             } catch (SQLException exception) {
                 throw new IllegalStateException("Failed to delete NPC " + id + ": " + exception.getMessage(),
@@ -129,9 +135,5 @@ public final class MySqlStorageBackend implements NpcStorageBackend {
         } catch (SQLException exception) {
             plugin.getLogger().severe("Failed to migrate MySQL schema: " + exception.getMessage());
         }
-    }
-
-    private static String normalizeId(String id) {
-        return id.toLowerCase();
     }
 }

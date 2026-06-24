@@ -274,32 +274,56 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
         NpcDisplayType createType = request.type();
         String createEntityType = request.entityType();
         NpcMobDisplayPose createMobDisplayPose = request.mobDisplayPose();
-        if (!ctx.npcService().createAt(player, id, createType, createEntityType, createMobDisplayPose)) {
+        String skinProfile = request.skinProfile();
+        if (!ctx.npcService().createAt(
+                player,
+                id,
+                createType,
+                createEntityType,
+                createMobDisplayPose,
+                skinProfile,
+                () -> sendCreateSuccess(player, request, id, createType, createEntityType),
+                error -> {
+                    if (player.isOnline()) {
+                        player.sendMessage(ctx.messageService().message(
+                                player,
+                                "command.spawn-failed",
+                                Placeholder.parsed("npc", id)
+                        ));
+                    }
+                }
+        )) {
             sender.sendMessage(ctx.messageService().message(player, "command.create-exists", Placeholder.parsed("npc", id)));
             return true;
         }
-        ctx.plugin().getServer().getScheduler().runTaskLater(ctx.plugin(), () -> {
-            if (ctx.npcService().findRuntime(id).map(runtime -> !runtime.isSpawned()).orElse(true)) {
-                player.sendMessage(ctx.messageService().message(player, "command.spawn-failed", Placeholder.parsed("npc", id)));
-                return;
-            }
-            if (request.autoId()) {
-                player.sendMessage(ctx.messageService().message(
-                        player,
-                        "command.create-success-auto",
-                        Placeholder.parsed("npc", id),
-                        Placeholder.parsed("type", formatCreateTypeLabel(createType, createEntityType))
-                ));
-                return;
-            }
+        return true;
+    }
+
+    private void sendCreateSuccess(
+            Player player,
+            NpcCreateArgsParser.Result request,
+            String id,
+            NpcDisplayType createType,
+            String createEntityType
+    ) {
+        if (!player.isOnline()) {
+            return;
+        }
+        if (request.autoId()) {
             player.sendMessage(ctx.messageService().message(
                     player,
-                    "command.create-success",
+                    "command.create-success-auto",
                     Placeholder.parsed("npc", id),
                     Placeholder.parsed("type", formatCreateTypeLabel(createType, createEntityType))
             ));
-        }, 20L);
-        return true;
+            return;
+        }
+        player.sendMessage(ctx.messageService().message(
+                player,
+                "command.create-success",
+                Placeholder.parsed("npc", id),
+                Placeholder.parsed("type", formatCreateTypeLabel(createType, createEntityType))
+        ));
     }
 
     private boolean handleGuiCancel(CommandSender sender) {
@@ -624,14 +648,14 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
                 case "migrate" -> filter(args[1], "yaml", "sqlite", "mysql");
                 case "import" -> filter(args[1], "znpcsplus");
                 case "pose" -> filter(args[1], "copy", "apply");
-                case "create" -> filter(args[1], createTypeTabOptions().toArray(String[]::new));
+                case "create" -> filter(args[1], createTabOptions(args).toArray(String[]::new));
                 default -> List.of();
             };
         }
         if (args.length == 3) {
             return switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "migrate" -> filter(args[2], "yaml", "sqlite", "mysql");
-                case "create" -> filter(args[2], createTypeTabOptions().toArray(String[]::new));
+                case "create" -> filter(args[2], createTabOptions(args).toArray(String[]::new));
                 case "skin" -> filter(args[2], skinProfileTabOptions().toArray(String[]::new));
                 default -> {
                     if ("pose".equalsIgnoreCase(args[0]) && "apply".equalsIgnoreCase(args[1])) {
@@ -671,6 +695,19 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
             ids.add(data.id);
         }
         return ids;
+    }
+
+    private List<String> createTabOptions(String[] args) {
+        List<String> options = new ArrayList<>(createTypeTabOptions());
+        options.add("s-");
+        options.add("-s");
+        if (args.length >= 2) {
+            String previous = args[args.length - 1];
+            if ("s-".equalsIgnoreCase(previous) || "-s".equalsIgnoreCase(previous)) {
+                return skinProfileTabOptions();
+            }
+        }
+        return options;
     }
 
     private static List<String> createTypeTabOptions() {

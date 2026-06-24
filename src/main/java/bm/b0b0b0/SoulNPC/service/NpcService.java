@@ -68,14 +68,49 @@ public final class NpcService {
             String entityType,
             NpcMobDisplayPose mobDisplayPose
     ) {
+        return createAt(player, id, type, entityType, mobDisplayPose, null);
+    }
+
+    public boolean createAt(
+            Player player,
+            String id,
+            NpcDisplayType type,
+            String entityType,
+            NpcMobDisplayPose mobDisplayPose,
+            String skinProfile
+    ) {
+        return createAt(player, id, type, entityType, mobDisplayPose, skinProfile, null, null);
+    }
+
+    public boolean createAt(
+            Player player,
+            String id,
+            NpcDisplayType type,
+            String entityType,
+            NpcMobDisplayPose mobDisplayPose,
+            String skinProfile,
+            Runnable onProfileReady,
+            Consumer<Throwable> onProfileError
+    ) {
         if (deps.repository().findById(id).isPresent()) {
             return false;
         }
-        NpcFileData data = deps.defaultsFactory().createFromPlayer(player, id, type, entityType, mobDisplayPose);
-        return create(data);
+        NpcFileData data = deps.defaultsFactory().createFromPlayer(
+                player,
+                id,
+                type,
+                entityType,
+                mobDisplayPose,
+                skinProfile
+        );
+        return create(data, onProfileReady, onProfileError);
     }
 
     public boolean create(NpcFileData data) {
+        return create(data, null, null);
+    }
+
+    public boolean create(NpcFileData data, Runnable onProfileReady, Consumer<Throwable> onProfileError) {
         if (data == null || data.id == null || data.id.isBlank()) {
             return false;
         }
@@ -89,7 +124,7 @@ public final class NpcService {
             return false;
         }
         deps.repository().save(data);
-        deps.spawnService().createRuntime(data);
+        deps.spawnService().createRuntime(data, onProfileReady, onProfileError);
         return true;
     }
 

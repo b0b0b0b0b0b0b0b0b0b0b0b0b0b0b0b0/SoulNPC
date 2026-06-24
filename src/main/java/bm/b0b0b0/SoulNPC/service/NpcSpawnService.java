@@ -8,6 +8,7 @@ import bm.b0b0b0.SoulNPC.packet.PacketNpcLookAtService;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcViewerService;
 import bm.b0b0b0.SoulNPC.repository.NpcRepository;
 import bm.b0b0b0.SoulNPC.util.NpcEntityIds;
+import bm.b0b0b0.SoulNPC.util.NpcIdValidator;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -17,6 +18,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public final class NpcSpawnService {
 
@@ -83,7 +85,7 @@ public final class NpcSpawnService {
     }
 
     public Optional<NpcRuntime> findRuntime(String id) {
-        return Optional.ofNullable(runtimes.get(normalize(id)));
+        return Optional.ofNullable(runtimes.get(NpcIdValidator.canonicalKey(id)));
     }
 
     public Optional<NpcRuntime> findByEntityId(int entityId) {
@@ -98,12 +100,12 @@ public final class NpcSpawnService {
     }
 
     public void registerHologramEntity(int entityId, String npcId) {
-        hologramEntityIndex.put(entityId, normalize(npcId));
+        hologramEntityIndex.put(entityId, NpcIdValidator.canonicalKey(npcId));
     }
 
     public void registerEntityAliases(NpcRuntime runtime) {
         NpcFileData data = runtime.data();
-        String npcId = normalize(data.id);
+        String npcId = NpcIdValidator.canonicalKey(data.id);
         entityIndex.put(data.entityId, npcId);
         var seat = runtime.playerSeat();
         if (seat != null) {
@@ -142,32 +144,46 @@ public final class NpcSpawnService {
     }
 
     public void register(NpcFileData data) {
+        register(data, null, null);
+    }
+
+    public void register(NpcFileData data, Runnable onProfileReady, Consumer<Throwable> onProfileError) {
         data.appearance.normalizePresentation();
         data.entityId = NpcEntityIds.resolve(data.id, data.entityId);
         NpcRuntime runtime = new NpcRuntime(data);
-        runtimes.put(normalize(data.id), runtime);
-        entityIndex.put(data.entityId, normalize(data.id));
+        runtimes.put(NpcIdValidator.canonicalKey(data.id), runtime);
+        entityIndex.put(data.entityId, NpcIdValidator.canonicalKey(data.id));
         textLabels.spawn(runtime);
         viewerService.prepareProfile(runtime, () -> {
-            if (runtime.packetMob() != null) {
-                runtime.packetMob().updateRotation(runtime.data().yaw, runtime.data().pitch);
-                animationService.onMobSpawned(runtime);
-            } else if (runtime.packetNpc() != null) {
-                viewerService.syncPlayerPose(runtime);
-                registerEntityAliases(runtime);
-                animationService.onMobSpawned(runtime);
+            onRuntimeProfileReady(runtime);
+            if (onProfileReady != null) {
+                onProfileReady.run();
             }
-        });
+        }, onProfileError);
+    }
+
+    private void onRuntimeProfileReady(NpcRuntime runtime) {
+        if (runtime.packetMob() != null) {
+            runtime.packetMob().updateRotation(runtime.data().yaw, runtime.data().pitch);
+            animationService.onMobSpawned(runtime);
+        } else if (runtime.packetNpc() != null) {
+            viewerService.syncPlayerPose(runtime);
+            registerEntityAliases(runtime);
+            animationService.onMobSpawned(runtime);
+        }
     }
 
     public void createRuntime(NpcFileData data) {
-        data.entityId = NpcEntityIds.resolve(data.id, data.entityId);
-        register(data);
+        createRuntime(data, null, null);
+    }
+
+    public void createRuntime(NpcFileData data, Runnable onProfileReady, Consumer<Throwable> onProfileError) {
+        register(data, onProfileReady, onProfileError);
     }
 
     public void removeRuntime(String id) {
-        String normalized = normalize(id);
-        NpcRuntime runtime = runtimes.remove(normalized);
+        String key = NpcIdValidator.canonicalKey(id);
+        NpcRuntime runtime = runtimes.remove(key);
         if (runtime != null) {
             entityIndex.remove(runtime.data().entityId);
             animationService.resetRuntime(runtime);
@@ -208,14 +224,7 @@ public final class NpcSpawnService {
             runtime.resetAnimationState();
             textLabels.spawn(runtime);
             viewerService.prepareProfile(runtime, () -> {
-                if (runtime.packetMob() != null) {
-                    runtime.packetMob().updateRotation(runtime.data().yaw, runtime.data().pitch);
-                    animationService.onMobSpawned(runtime);
-                } else if (runtime.packetNpc() != null) {
-                    viewerService.syncPlayerPose(runtime);
-                    registerEntityAliases(runtime);
-                    animationService.onMobSpawned(runtime);
-                }
+                onRuntimeProfileReady(runtime);
                 if (onProfileReady != null) {
                     onProfileReady.run();
                 }
@@ -291,9 +300,5 @@ public final class NpcSpawnService {
             }
             viewerService.showToNearbyPlayers(runtime);
         });
-    }
-
-    private static String normalize(String id) {
-        return id.toLowerCase();
     }
 }

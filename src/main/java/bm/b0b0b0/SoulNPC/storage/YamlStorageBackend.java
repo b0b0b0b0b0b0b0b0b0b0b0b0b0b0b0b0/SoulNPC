@@ -1,6 +1,7 @@
 package bm.b0b0b0.SoulNPC.storage;
 
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
+import bm.b0b0b0.SoulNPC.util.NpcIdValidator;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
@@ -46,7 +47,7 @@ public final class YamlStorageBackend implements NpcStorageBackend {
                 for (Path path : stream) {
                     try {
                         NpcFileData data = NpcPayloadCodec.decodeFromPath(path);
-                        result.put(normalizeId(data.id), data);
+                        result.put(NpcIdValidator.canonicalKey(data.id), data);
                     } catch (Exception exception) {
                         plugin.getLogger().warning("Failed to load NPC file " + path.getFileName() + ": "
                                 + exception.getMessage());
@@ -62,15 +63,19 @@ public final class YamlStorageBackend implements NpcStorageBackend {
     @Override
     public CompletableFuture<Void> save(String id, NpcFileData data) {
         return CompletableFuture.runAsync(() -> {
-            String normalized = normalizeId(id);
-            data.id = normalized;
+            String storedId = NpcIdValidator.normalize(id);
+            if (data.id == null || data.id.isBlank()) {
+                data.id = storedId;
+            } else {
+                data.id = NpcIdValidator.normalize(data.id);
+            }
             data.prepareForYamlSave();
-            Path file = npcFolder.resolve(normalized + ".yml");
+            Path file = npcFolder.resolve(data.id + ".yml");
             try {
                 Files.createDirectories(npcFolder);
                 data.save(file);
             } catch (Exception exception) {
-                throw new IllegalStateException("Failed to save NPC " + normalized + ": " + exception.getMessage(),
+                throw new IllegalStateException("Failed to save NPC " + data.id + ": " + exception.getMessage(),
                         exception);
             }
         }, executor);
@@ -79,7 +84,7 @@ public final class YamlStorageBackend implements NpcStorageBackend {
     @Override
     public CompletableFuture<Void> delete(String id) {
         return CompletableFuture.runAsync(() -> {
-            Path file = npcFolder.resolve(normalizeId(id) + ".yml");
+            Path file = npcFolder.resolve(NpcIdValidator.normalize(id) + ".yml");
             try {
                 Files.deleteIfExists(file);
             } catch (IOException exception) {
@@ -107,9 +112,5 @@ public final class YamlStorageBackend implements NpcStorageBackend {
 
     public Path npcFolder() {
         return npcFolder;
-    }
-
-    private static String normalizeId(String id) {
-        return id.toLowerCase();
     }
 }

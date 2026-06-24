@@ -97,9 +97,7 @@ public final class PacketPlayerAppearance {
         List<EntityData<?>> metadata = new ArrayList<>(4);
         NpcEntityPose pose = resolvePose(appearance, poseOverride);
         byte flags = entityFlags(appearance, pose);
-        if (flags != 0) {
-            metadata.add(new EntityData<>(FLAGS_INDEX, EntityDataTypes.BYTE, flags));
-        }
+        metadata.add(new EntityData<>(FLAGS_INDEX, EntityDataTypes.BYTE, flags));
         if (appearance.noGravity) {
             metadata.add(new EntityData<>(NO_GRAVITY_INDEX, EntityDataTypes.BOOLEAN, true));
         }

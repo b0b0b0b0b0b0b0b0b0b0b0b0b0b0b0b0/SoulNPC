@@ -36,7 +36,7 @@ command:
   info-line: "<gray><key>:</gray> <white><value></white>"
   pose-copied: "<prefix><green>Pose copied to buffer.</green>"
   pose-applied: "<prefix><green>Pose applied to <yellow><npc></yellow>.</green>"
-  invalid-id: "<prefix><red>Invalid ID (a-z, 0-9, _, -, max 32 chars). No ID: <cmd:'/soulnpc create'> — auto number</red>"
+  invalid-id: "<prefix><red>Invalid ID (a-z, A-Z, 0-9, _, -, max 32 chars). No ID: <cmd:'/soulnpc create'> — auto number</red>"
   skin-usage: "<prefix><cmd:'/soulnpc skin <id> <name>':gray> · <cmd:'/soulnpc skin <id> url <url>':gray> · <cmd:'/soulnpc skin <id> file <name>':gray> · omit skin for yours"
   skin-url-usage: "<prefix><gray>/soulnpc skin <id> url <url></gray>"
   skin-file-usage: "<prefix><gray>/soulnpc skin <id> file <file in skins/></gray>"
@@ -495,7 +495,7 @@ gui:
 
 help:
   - "<prefix><white>SoulNPC commands:</white>"
-  - "<cmd:'/soulnpc create [id] [type]':gray> — no id: 1, 2, 3…; type: player, zombie, fox_snow…"
+  - "<cmd:'/soulnpc create [id] [type] [s- <nick>]':gray> — no id: 1, 2, 3…; skin: <cmd:'/soulnpc create s- Nick'>"
   - "<cmd:'/soulnpc delete <id>':gray> — delete"
   - "<cmd:'/soulnpc edit':gray> — editor GUI"
   - "<cmd:'/soulnpc list':gray> — list NPCs"

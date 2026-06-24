@@ -233,7 +233,7 @@ public final class GuiNpcEditSettings extends YamlSerializable {
         public int size = 45;
         public Material fillerMaterial = Material.GRAY_STAINED_GLASS_PANE;
 
-        public int toggleSlot = 22;
+        public int disableSlot = 26;
         public int backSlot = 36;
 
         public int colorSlot0 = 10;
@@ -246,22 +246,26 @@ public final class GuiNpcEditSettings extends YamlSerializable {
         public int colorSlot7 = 19;
         public int colorSlot8 = 20;
         public int colorSlot9 = 21;
-        public int colorSlot10 = 23;
-        public int colorSlot11 = 24;
-        public int colorSlot12 = 25;
-        public int colorSlot13 = 28;
-        public int colorSlot14 = 29;
+        public int colorSlot10 = 22;
+        public int colorSlot11 = 23;
+        public int colorSlot12 = 24;
+        public int colorSlot13 = 25;
+        public int colorSlot14 = 28;
+        public int colorSlot15 = 29;
+        public int colorSlot16 = 30;
+        public int colorSlot17 = 31;
+        public int colorSlot18 = 32;
+        public int colorSlot19 = 33;
+        public int colorSlot20 = 34;
 
-        public int disableSlot = 31;
-
-        public Material toggleMaterial = Material.GLOWSTONE_DUST;
         public Material disableMaterial = Material.BARRIER;
         public Material backMaterial = Material.LIGHT_GRAY_DYE;
 
         public int[] colorSlots() {
             return new int[]{
                     colorSlot0, colorSlot1, colorSlot2, colorSlot3, colorSlot4, colorSlot5, colorSlot6,
-                    colorSlot7, colorSlot8, colorSlot9, colorSlot10, colorSlot11, colorSlot12, colorSlot13, colorSlot14
+                    colorSlot7, colorSlot8, colorSlot9, colorSlot10, colorSlot11, colorSlot12, colorSlot13,
+                    colorSlot14, colorSlot15, colorSlot16, colorSlot17, colorSlot18, colorSlot19, colorSlot20
             };
         }
     }

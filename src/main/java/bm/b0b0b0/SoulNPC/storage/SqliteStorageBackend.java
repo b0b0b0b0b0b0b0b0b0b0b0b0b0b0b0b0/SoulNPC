@@ -1,6 +1,7 @@
 package bm.b0b0b0.SoulNPC.storage;
 
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
+import bm.b0b0b0.SoulNPC.util.NpcIdValidator;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.nio.file.Files;
@@ -49,7 +50,7 @@ public final class SqliteStorageBackend implements NpcStorageBackend {
                         String payload = resultSet.getString("payload");
                         try {
                             NpcFileData data = NpcPayloadCodec.decode(payload, id);
-                            result.put(normalizeId(data.id), data);
+                            result.put(NpcIdValidator.canonicalKey(data.id), data);
                         } catch (Exception exception) {
                             plugin.getLogger().warning("Failed to decode NPC " + id + ": " + exception.getMessage());
                         }
@@ -65,8 +66,13 @@ public final class SqliteStorageBackend implements NpcStorageBackend {
     @Override
     public CompletableFuture<Void> save(String id, NpcFileData data) {
         return CompletableFuture.runAsync(() -> {
-            String normalized = normalizeId(id);
-            data.id = normalized;
+            String storedId = NpcIdValidator.normalize(id);
+            if (data.id == null || data.id.isBlank()) {
+                data.id = storedId;
+            } else {
+                data.id = NpcIdValidator.normalize(data.id);
+            }
+            String key = NpcIdValidator.canonicalKey(data.id);
             try {
                 String payload = NpcPayloadCodec.encode(data);
                 ensureSchema();
@@ -76,13 +82,13 @@ public final class SqliteStorageBackend implements NpcStorageBackend {
                              VALUES (?, ?, ?)
                              ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at
                              """)) {
-                    statement.setString(1, normalized);
+                    statement.setString(1, key);
                     statement.setString(2, payload);
                     statement.setLong(3, System.currentTimeMillis());
                     statement.executeUpdate();
                 }
             } catch (Exception exception) {
-                throw new IllegalStateException("Failed to save NPC " + normalized + ": " + exception.getMessage(),
+                throw new IllegalStateException("Failed to save NPC " + data.id + ": " + exception.getMessage(),
                         exception);
             }
         }, executor);
@@ -96,7 +102,7 @@ public final class SqliteStorageBackend implements NpcStorageBackend {
                 try (Connection connection = openConnection();
                      PreparedStatement statement = connection.prepareStatement(
                              "DELETE FROM soulnpc_npcs WHERE id = ?")) {
-                    statement.setString(1, normalizeId(id));
+                    statement.setString(1, NpcIdValidator.canonicalKey(id));
                     statement.executeUpdate();
                 }
             } catch (SQLException exception) {
@@ -139,9 +145,5 @@ public final class SqliteStorageBackend implements NpcStorageBackend {
 
     private Connection openConnection() throws SQLException {
         return DriverManager.getConnection(jdbcUrl);
-    }
-
-    private static String normalizeId(String id) {
-        return id.toLowerCase();
     }
 }
