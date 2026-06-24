@@ -28,6 +28,7 @@ import bm.b0b0b0.SoulNPC.repository.CachedNpcRepository;
 import bm.b0b0b0.SoulNPC.repository.NpcRepository;
 import bm.b0b0b0.SoulNPC.storage.DatabaseLifecycle;
 import bm.b0b0b0.SoulNPC.storage.NpcMigrationService;
+import bm.b0b0b0.SoulNPC.storage.NpcPayloadCodec;
 import bm.b0b0b0.SoulNPC.storage.NpcRepositoryFactory;
 import bm.b0b0b0.SoulNPC.storage.NpcStorageBackend;
 import bm.b0b0b0.SoulNPC.service.NpcAnimationService;
@@ -131,6 +132,7 @@ public final class SoulNPC extends JavaPlugin {
         );
 
         databaseLifecycle = new DatabaseLifecycle();
+        NpcPayloadCodec.setLogger(getLogger());
         NpcStorageBackend storageBackend = NpcRepositoryFactory.createActiveBackend(this, pluginConfig, databaseLifecycle);
         npcRepository = new CachedNpcRepository(this, storageBackend);
         migrationService = new NpcMigrationService(this, pluginConfig, databaseLifecycle);

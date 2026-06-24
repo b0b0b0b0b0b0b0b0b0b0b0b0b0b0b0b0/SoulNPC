@@ -126,8 +126,17 @@ public final class NpcInteractionData {
     })
     public List<NpcInteractionAction> actions = new ArrayList<>();
 
+    public void normalizeActions() {
+        if (actions == null) {
+            actions = new ArrayList<>();
+            return;
+        }
+        actions.removeIf(action -> action == null || !action.isActionable());
+    }
+
     public void ensureActionsMigrated() {
-        if (actions != null && !actions.isEmpty()) {
+        normalizeActions();
+        if (!actions.isEmpty()) {
             return;
         }
         actions = new ArrayList<>();
@@ -158,7 +167,7 @@ public final class NpcInteractionData {
         List<NpcInteractionAction> specific = new ArrayList<>();
         List<NpcInteractionAction> any = new ArrayList<>();
         for (NpcInteractionAction action : actions) {
-            if (action == null || action.value == null || action.value.isBlank()) {
+            if (action == null || !action.isActionable()) {
                 continue;
             }
             if (action.click == NpcClickBinding.ANY) {
@@ -182,7 +191,7 @@ public final class NpcInteractionData {
         }
         int count = 0;
         for (NpcInteractionAction action : actions) {
-            if (action != null && action.value != null && !action.value.isBlank()) {
+            if (action != null && action.isActionable()) {
                 count++;
             }
         }

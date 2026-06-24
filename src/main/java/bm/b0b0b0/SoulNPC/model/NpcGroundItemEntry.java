@@ -1,7 +1,5 @@
 package bm.b0b0b0.SoulNPC.model;
 
-import net.elytrium.serializer.annotations.Comment;
-import net.elytrium.serializer.annotations.CommentValue;
 import org.bukkit.Material;
 
 import java.util.ArrayList;
@@ -10,15 +8,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public final class NpcGroundItemEntry {
 
-    @Comment(value = {
-            @CommentValue(" Материалы на выброс — каждый раз случайный из списка"),
-            @CommentValue(" GOLD_INGOT, DIAMOND, EMERALD, …")
-    })
     public List<Material> materials = defaultMaterials();
-
-    @Comment(value = {
-            @CommentValue(" Количество на дроп (визуально, не выдаётся игроку)")
-    })
     public int amount = 1;
 
     @Deprecated

@@ -97,7 +97,7 @@ public final class NpcActionsMenu extends AbstractNpcEditMenu {
         fillPane(layout.size, GuiMenuItems.pane());
         NpcFileData data = findNpc();
         if (data != null) {
-            data.interaction.ensureActionsMigrated();
+            data.interaction.normalizeActions();
             int slot = 0;
             for (int index = 0; index < data.interaction.actions.size() && slot < layout.backSlot; index++) {
                 if (slot == layout.backSlot || slot == layout.addSlot) {

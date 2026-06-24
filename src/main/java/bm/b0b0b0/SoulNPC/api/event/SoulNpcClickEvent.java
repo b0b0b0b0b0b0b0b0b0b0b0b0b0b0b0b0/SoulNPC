@@ -17,7 +17,7 @@ public final class SoulNpcClickEvent extends PlayerEvent implements Cancellable 
     private boolean cancelled;
 
     public SoulNpcClickEvent(@NotNull Player player, @NotNull NpcFileData npc, @NotNull NpcClickType clickType) {
-        super(player, true);
+        super(player, false);
         this.npc = npc;
         this.clickType = clickType;
     }

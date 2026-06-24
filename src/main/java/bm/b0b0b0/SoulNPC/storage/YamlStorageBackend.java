@@ -47,7 +47,7 @@ public final class YamlStorageBackend implements NpcStorageBackend {
                     try {
                         NpcFileData data = NpcPayloadCodec.decodeFromPath(path);
                         result.put(normalizeId(data.id), data);
-                    } catch (IOException exception) {
+                    } catch (Exception exception) {
                         plugin.getLogger().warning("Failed to load NPC file " + path.getFileName() + ": "
                                 + exception.getMessage());
                     }
