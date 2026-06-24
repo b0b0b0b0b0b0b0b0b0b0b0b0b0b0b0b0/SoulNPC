@@ -2,7 +2,6 @@ package bm.b0b0b0.SoulNPC.service;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public final class PlaceholderService {
 
@@ -47,9 +46,7 @@ public final class PlaceholderService {
         return available;
     }
 
-    public static void init(JavaPlugin plugin) {
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            plugin.getLogger().info("PlaceholderAPI подключён — плейсхолдеры в действиях NPC.");
-        }
+    public static boolean init() {
+        return isAvailable();
     }
 }

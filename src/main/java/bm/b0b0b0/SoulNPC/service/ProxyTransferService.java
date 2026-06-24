@@ -18,7 +18,7 @@ public final class ProxyTransferService {
         this.plugin = plugin;
     }
 
-    public void init() {
+    public boolean init() {
         if (Bukkit.getPluginManager().getPlugin("BungeeCord") != null
                 || Bukkit.getPluginManager().getPlugin("bungeecord") != null) {
             Messenger messenger = plugin.getServer().getMessenger();
@@ -26,8 +26,8 @@ public final class ProxyTransferService {
                 messenger.registerOutgoingPluginChannel(plugin, "BungeeCord");
             }
             bungeeChannelRegistered = true;
-            plugin.getLogger().info("BungeeCord channel зарегистрирован — switchserver доступен.");
         }
+        return bungeeChannelRegistered;
     }
 
     public boolean transfer(Player player, String serverName) {

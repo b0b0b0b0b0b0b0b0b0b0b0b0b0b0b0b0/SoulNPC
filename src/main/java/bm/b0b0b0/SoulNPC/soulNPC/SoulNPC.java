@@ -37,9 +37,12 @@ import bm.b0b0b0.SoulNPC.service.PlaceholderService;
 import bm.b0b0b0.SoulNPC.service.ProxyTransferService;
 import bm.b0b0b0.SoulNPC.service.NpcService;
 import bm.b0b0b0.SoulNPC.service.NpcSpawnService;
+import bm.b0b0b0.SoulNPC.util.SoulNpcConsole;
 import bm.b0b0b0.SoulNPC.util.SoulNpcKeys;
+import bm.b0b0b0.SoulNPC.util.upd.SoulNpcUpdateChecker;
 import com.github.retrooper.packetevents.PacketEvents;
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class SoulNPC extends JavaPlugin {
@@ -54,21 +57,41 @@ public final class SoulNPC extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        String version = getPluginMeta().getVersion();
+        SoulNpcConsole.banner(version, "b0b0b0");
+
         if (!isPacketEventsPresent()) {
-            getLogger().severe("packetevents is required! Download: https://github.com/retrooper/packetevents");
+            SoulNpcConsole.errorBlock(
+                    "PacketEvents is required but was not found!",
+                    "Download: https://github.com/retrooper/packetevents"
+            );
             Bukkit.getPluginManager().disablePlugin(this);
             return;
         }
+        SoulNpcConsole.integration("PacketEvents", true, "connected", "missing");
 
         getDataFolder().mkdirs();
+        SoulNpcConsole.info("Loading configuration (config.yml, gui/, lang/)…");
 
         pluginConfig = PluginConfig.load(this);
         messageService = new MessageService(this, pluginConfig);
+        SoulNpcConsole.info("Locale default: \u001B[90m" + pluginConfig.settings().general.defaultLocale + "\u001B[0m");
+
         SkinService skinService = new SkinService(this);
         ItemStackFactory itemStackFactory = new ItemStackFactory(this, pluginConfig);
-        if (skinService.initSkinRestorer()) {
-            getLogger().info("SkinRestorer подключён — скины NPC из базы SR.");
-        }
+        SoulNpcConsole.integration(
+                "SkinsRestorer",
+                skinService.initSkinRestorer(),
+                "skin database available",
+                "not found — Mojang nick skins only"
+        );
+        SoulNpcConsole.integration(
+                "PlaceholderAPI",
+                PlaceholderService.init(),
+                "placeholders in actions and holograms",
+                "not found — built-in placeholders only"
+        );
+
         SoulNpcKeys soulNpcKeys = new SoulNpcKeys(this);
         NpcTextLabels textLabels = new NpcTextLabels(this, pluginConfig, itemStackFactory, soulNpcKeys);
         PacketNpcViewerService viewerService = new PacketNpcViewerService(
@@ -91,14 +114,27 @@ public final class SoulNPC extends JavaPlugin {
                 mobPoseService
         );
         NpcGroundItemEffectService groundItemEffectService = new NpcGroundItemEffectService(this, soulNpcKeys);
+
         ProxyTransferService proxyTransferService = new ProxyTransferService(this);
-        proxyTransferService.init();
-        PlaceholderService.init(this);
+        SoulNpcConsole.integration(
+                "BungeeCord",
+                proxyTransferService.init(),
+                "switchserver channel registered",
+                "not found — console send fallback for SWITCH_SERVER"
+        );
+        logOptionalIntegration("ViaVersion", "ViaVersion", "ViaBackwards", "ViaRewind");
+        SoulNpcConsole.integration(
+                "Geyser",
+                isPluginPresent("Geyser-Spigot"),
+                "Bedrock clients supported",
+                "not found"
+        );
 
         databaseLifecycle = new DatabaseLifecycle();
         NpcStorageBackend storageBackend = NpcRepositoryFactory.createActiveBackend(this, pluginConfig, databaseLifecycle);
         npcRepository = new CachedNpcRepository(this, storageBackend);
         migrationService = new NpcMigrationService(this, pluginConfig, databaseLifecycle);
+        SoulNpcConsole.info("Storage backend: \u001B[90m" + storageBackend.type().configKey() + "\u001B[0m");
 
         spawnService = new NpcSpawnService(
                 this,
@@ -119,6 +155,7 @@ public final class SoulNPC extends JavaPlugin {
         );
         npcService = new NpcService(this, npcRepository, spawnService, new NpcDefaultsFactory(pluginConfig));
         SoulNpcApi.register(new SoulNpcApi(new NpcRegistryImpl(npcRepository, npcService)));
+        SoulNpcConsole.info("Public API registered (load: STARTUP)");
 
         PacketEvents.getAPI().getEventManager().registerListener(
                 new PacketNpcInteractListener(spawnService, interactionService)
@@ -154,10 +191,17 @@ public final class SoulNPC extends JavaPlugin {
                 migrationService
         );
 
+        SoulNpcConsole.info("Loading NPC data asynchronously…");
         ((CachedNpcRepository) npcRepository).initialLoad(() -> {
+            int total = npcRepository.findAll().size();
+            int enabled = (int) npcRepository.findAll().stream().filter(data -> data.enabled).count();
             spawnService.bootstrapLoadedNpcs();
             spawnService.start();
-            getLogger().info("SoulNPC ready — storage: " + storageBackend.type().configKey() + ".");
+            SoulNpcConsole.success("NPC cache ready: \u001B[32m" + total + "\u001B[0m total, "
+                    + "\u001B[32m" + enabled + "\u001B[0m enabled (storage: "
+                    + storageBackend.type().configKey() + ")");
+            SoulNpcConsole.success("SoulNPC successfully enabled");
+            SoulNpcConsole.sectionEnd();
         });
 
         getServer().getPluginManager().registerEvents(new PlayerNpcLifecycleListener(spawnService), this);
@@ -181,10 +225,15 @@ public final class SoulNPC extends JavaPlugin {
         var pluginCommand = getCommand("soulnpc");
         pluginCommand.setExecutor(command);
         pluginCommand.setTabCompleter(command);
+        SoulNpcConsole.info("Command /soulnpc registered (aliases: snpc, npc)");
+
+        SoulNpcUpdateChecker.schedule(this, version);
     }
 
     @Override
     public void onDisable() {
+        SoulNpcConsole.blank();
+        SoulNpcConsole.line("Disabling SoulNPC…");
         SoulNpcApi.unregister();
         if (spawnService != null) {
             spawnService.stop();
@@ -192,10 +241,26 @@ public final class SoulNPC extends JavaPlugin {
         if (databaseLifecycle != null) {
             databaseLifecycle.closeAll();
         }
+        SoulNpcConsole.success("SoulNPC disabled");
+        SoulNpcConsole.blank();
     }
 
     private static boolean isPacketEventsPresent() {
-        return Bukkit.getPluginManager().getPlugin("packetevents") != null
-                || Bukkit.getPluginManager().getPlugin("PacketEvents") != null;
+        return isPluginPresent("packetevents") || isPluginPresent("PacketEvents");
+    }
+
+    private static boolean isPluginPresent(String name) {
+        return Bukkit.getPluginManager().getPlugin(name) != null;
+    }
+
+    private static void logOptionalIntegration(String label, String... pluginNames) {
+        for (String pluginName : pluginNames) {
+            Plugin plugin = Bukkit.getPluginManager().getPlugin(pluginName);
+            if (plugin != null && plugin.isEnabled()) {
+                SoulNpcConsole.integration(label, true, pluginName + " detected", "not found");
+                return;
+            }
+        }
+        SoulNpcConsole.integration(label, false, "detected", "not found");
     }
 }
