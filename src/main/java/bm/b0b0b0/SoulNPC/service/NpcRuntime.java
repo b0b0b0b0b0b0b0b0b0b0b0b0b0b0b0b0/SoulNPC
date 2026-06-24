@@ -3,6 +3,7 @@ package bm.b0b0b0.SoulNPC.service;
 import bm.b0b0b0.SoulNPC.model.NpcEntityPose;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
 import bm.b0b0b0.SoulNPC.packet.PacketPlayerAppearance;
+import bm.b0b0b0.SoulNPC.packet.PacketPlayerSwimSupport;
 import com.github.retrooper.packetevents.protocol.npc.NPC;
 
 import java.util.ArrayList;
@@ -21,8 +22,10 @@ public final class NpcRuntime {
     private bm.b0b0b0.SoulNPC.packet.PacketPlayerSeat playerSeat;
     private final List<UUID> hologramDisplayIds = new ArrayList<>();
     private final Set<UUID> viewers = new HashSet<>();
+    private final Set<UUID> hologramViewers = new HashSet<>();
     private boolean profileReady;
     private int animationTicks;
+    private int swimTicks;
     private int customFrameIndex;
     private boolean waveMainHand = true;
     private boolean bowLowered;
@@ -114,6 +117,7 @@ public final class NpcRuntime {
 
     public void clearHologramDisplays() {
         hologramDisplayIds.clear();
+        hologramViewers.clear();
     }
 
     public boolean isProfileReady() {
@@ -142,6 +146,19 @@ public final class NpcRuntime {
 
     public void clearViewers() {
         viewers.clear();
+        hologramViewers.clear();
+    }
+
+    public boolean isHologramVisibleTo(UUID playerId) {
+        return hologramViewers.contains(playerId);
+    }
+
+    public void addHologramViewer(UUID playerId) {
+        hologramViewers.add(playerId);
+    }
+
+    public void removeHologramViewer(UUID playerId) {
+        hologramViewers.remove(playerId);
     }
 
     public int animationTicks() {
@@ -175,8 +192,13 @@ public final class NpcRuntime {
         return animationPhase;
     }
 
+    public int incrementSwimTicks() {
+        return ++swimTicks;
+    }
+
     public void resetAnimationState() {
         animationTicks = 0;
+        swimTicks = 0;
         customFrameIndex = 0;
         mobPoseIndex = 0;
         waveMainHand = true;
@@ -192,11 +214,7 @@ public final class NpcRuntime {
 
     public void resetLookRotation() {
         lookYaw = data.yaw;
-        if (data.appearance.isPacketMob() && !data.lookAtPlayers) {
-            lookPitch = 0.0F;
-        } else {
-            lookPitch = data.pitch;
-        }
+        lookPitch = PacketPlayerSwimSupport.swimBasePitch(data);
         lookInitialized = true;
     }
 
@@ -208,10 +226,20 @@ public final class NpcRuntime {
         return new float[]{lookYaw, lookPitch};
     }
 
+    public float currentLookYaw() {
+        initLookIfNeeded();
+        return lookYaw;
+    }
+
+    public float currentLookPitch() {
+        initLookIfNeeded();
+        return lookPitch;
+    }
+
     private void initLookIfNeeded() {
         if (!lookInitialized) {
             lookYaw = data.yaw;
-            lookPitch = data.pitch;
+            lookPitch = PacketPlayerSwimSupport.swimBasePitch(data);
             lookInitialized = true;
         }
     }

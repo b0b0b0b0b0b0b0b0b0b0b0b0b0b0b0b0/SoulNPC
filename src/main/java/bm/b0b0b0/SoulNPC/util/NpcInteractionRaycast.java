@@ -54,9 +54,6 @@ public final class NpcInteractionRaycast {
         return Optional.ofNullable(best);
     }
 
-    /**
-     * @return distance along the look ray to the NPC center, or -1 if the ray misses the hit cylinder
-     */
     static double distanceAlongRay(
             Location eye,
             Vector direction,

@@ -1,5 +1,6 @@
 package bm.b0b0b0.SoulNPC.packet;
 
+import bm.b0b0b0.SoulNPC.appearance.ItemStackFactory;
 import bm.b0b0b0.SoulNPC.mob.MobMetadataBuilder;
 import bm.b0b0b0.SoulNPC.mob.NpcEntityTypeResolver;
 import bm.b0b0b0.SoulNPC.mob.NpcMobProfile;
@@ -17,7 +18,6 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDe
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityHeadLook;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityRotation;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityTeleport;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSpawnEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -29,16 +29,12 @@ import java.util.UUID;
 public final class PacketMobNpc {
 
     private final int entityId;
-    private final UUID uuid;
-    private final EntityType entityType;
     private final NpcFileData data;
     private final Set<Object> spawnedChannels = new HashSet<>();
 
-    public PacketMobNpc(NpcFileData data, EntityType entityType) {
+    public PacketMobNpc(NpcFileData data) {
         this.data = data;
         this.entityId = data.entityId;
-        this.uuid = NpcUuids.forNpc(data.id);
-        this.entityType = entityType;
     }
 
     public int entityId() {
@@ -53,11 +49,16 @@ public final class PacketMobNpc {
         return Set.copyOf(spawnedChannels);
     }
 
-    public void spawn(Object channel) {
+    public void spawn(Object channel, ItemStackFactory itemStackFactory) {
         if (channel == null || spawnedChannels.contains(channel)) {
             return;
         }
         Location location = spawnLocation();
+        EntityType entityType = resolveEntityType(data.appearance);
+        if (entityType == null) {
+            return;
+        }
+        UUID uuid = NpcUuids.forNpc(data.id);
         WrapperPlayServerSpawnEntity spawn = new WrapperPlayServerSpawnEntity(
                 entityId,
                 uuid,
@@ -69,7 +70,20 @@ public final class PacketMobNpc {
         );
         PacketEvents.getAPI().getProtocolManager().sendPacket(channel, spawn);
         sendMetadata(channel);
+        if (itemStackFactory != null) {
+            PacketMobEquipment.apply(channel, entityId, data.appearance, itemStackFactory);
+        }
         spawnedChannels.add(channel);
+    }
+
+    public void spawn(Object channel) {
+        spawn(channel, null);
+    }
+
+    public void refreshEquipment(ItemStackFactory itemStackFactory) {
+        for (Object channel : Set.copyOf(spawnedChannels)) {
+            PacketMobEquipment.refresh(channel, entityId, data.appearance, itemStackFactory);
+        }
     }
 
     public void refreshPose() {

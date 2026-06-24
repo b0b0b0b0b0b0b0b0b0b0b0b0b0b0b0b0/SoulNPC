@@ -8,7 +8,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.Collection;
-import java.util.UUID;
 
 public final class PacketNpcLookAtService {
 
@@ -34,7 +33,7 @@ public final class PacketNpcLookAtService {
             if (world == null) {
                 continue;
             }
-            Player nearest = findNearest(world, data);
+            Player nearest = findNearestPlayer(world, data, world.getPlayers());
             if (nearest == null) {
                 smoothToBase(runtime, LOOK_SMOOTH);
                 continue;
@@ -60,10 +59,7 @@ public final class PacketNpcLookAtService {
     }
 
     private static float mobBasePitch(NpcFileData data) {
-        if (data.appearance.isPacketMob()) {
-            return 0.0F;
-        }
-        return data.pitch;
+        return PacketPlayerSwimSupport.swimBasePitch(data);
     }
 
     public float greetTurnSmooth() {
@@ -86,7 +82,7 @@ public final class PacketNpcLookAtService {
         }
     }
 
-    static Player findNearestViewer(NpcRuntime runtime, World world, NpcFileData data) {
+    private static Player findNearestPlayer(World world, NpcFileData data, Iterable<Player> candidates) {
         int range = data.lookAtRange <= 0 ? 32 : data.lookAtRange;
         double rangeSquared = (double) range * range;
         var origin = NpcLookAtUtil.npcEyes(data);
@@ -95,35 +91,11 @@ public final class PacketNpcLookAtService {
         }
         Player nearest = null;
         double bestDistance = Double.MAX_VALUE;
-        for (UUID viewerId : runtime.viewers()) {
-            Player player = Bukkit.getPlayer(viewerId);
+        for (Player player : candidates) {
             if (player == null || !player.isOnline() || player.isDead()) {
                 continue;
             }
             if (!player.getWorld().equals(world)) {
-                continue;
-            }
-            double distanceSquared = player.getEyeLocation().distanceSquared(origin);
-            if (distanceSquared > rangeSquared || distanceSquared >= bestDistance) {
-                continue;
-            }
-            bestDistance = distanceSquared;
-            nearest = player;
-        }
-        return nearest;
-    }
-
-    private static Player findNearest(World world, NpcFileData data) {
-        int range = data.lookAtRange <= 0 ? 32 : data.lookAtRange;
-        double rangeSquared = (double) range * range;
-        var origin = NpcLookAtUtil.npcEyes(data);
-        if (origin == null) {
-            return null;
-        }
-        Player nearest = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (Player player : world.getPlayers()) {
-            if (!player.isOnline() || player.isDead()) {
                 continue;
             }
             double distanceSquared = player.getEyeLocation().distanceSquared(origin);

@@ -62,7 +62,6 @@ public final class NpcDefaultsFactory {
         data.appearance.useTextDisplay = true;
         data.appearance.noGravity = true;
         data.appearance.name = "<gradient:#7C3AED:#A855F7>" + id + "</gradient>";
-        data.appearance.description = "<gray>Тут ваше описание</gray>";
         data.appearance.profile = player.getName();
 
         applyDisplayType(data, type, entityType, mobDisplayPose);

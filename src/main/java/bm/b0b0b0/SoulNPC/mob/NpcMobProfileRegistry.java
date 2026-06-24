@@ -1,6 +1,5 @@
 package bm.b0b0b0.SoulNPC.mob;
 
-import bm.b0b0b0.SoulNPC.model.NpcAppearanceData;
 import bm.b0b0b0.SoulNPC.model.NpcEntityPose;
 import bm.b0b0b0.SoulNPC.model.NpcMobDisplayPose;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
@@ -153,28 +152,6 @@ public final class NpcMobProfileRegistry {
                 .allowedDisplayPoses(NpcMobDisplayPose.STANDING, NpcMobDisplayPose.ON_BACK)
                 .supportedPoses(NpcEntityPose.STANDING)
                 .build());
-    }
-
-    private static NpcMobProfile standingOnlyProfile(
-            float eyeHeight,
-            float aimCenterY,
-            float hologramOffset,
-            double horizontalRadius,
-            double verticalHalf
-    ) {
-        return NpcMobProfile.builder()
-                .poseSupport(NpcMobPoseSupport.NONE)
-                .mobPoseAnimation(false)
-                .eyeHeight(eyeHeight)
-                .aimCenterY(aimCenterY)
-                .hologramBaseOffset(hologramOffset)
-                .horizontalRadius(horizontalRadius)
-                .verticalHalfHeight(verticalHalf)
-                .raycastCenterY(aimCenterY)
-                .raycastVerticalHalf(verticalHalf)
-                .lookAtPitch(false)
-                .supportedPoses(NpcEntityPose.STANDING)
-                .build();
     }
 
     private static void registerArmorStand() {

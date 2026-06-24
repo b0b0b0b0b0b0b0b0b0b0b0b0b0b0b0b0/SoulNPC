@@ -8,6 +8,7 @@ import bm.b0b0b0.SoulNPC.packet.PacketMobPoseService;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcAnimator;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcGreetService;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcLookAtService;
+import bm.b0b0b0.SoulNPC.packet.PacketPlayerSwimSupport;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -63,6 +64,7 @@ public final class NpcAnimationService {
     public void tick(Collection<NpcRuntime> runtimes) {
         greetService.tick(runtimes);
         lookAtService.tick(runtimes);
+        tickSwimMotion(runtimes);
 
         int batchSize = pluginConfig.settings().performance.animationBatchSize;
         if (batchSize <= 0) {
@@ -138,5 +140,14 @@ public final class NpcAnimationService {
             return NpcMobProfileRegistry.resolve(runtime.data()).mobPoseAnimation();
         }
         return runtime.packetNpc() != null && runtime.data().appearance.type.isPlayerModel();
+    }
+
+    private static void tickSwimMotion(Collection<NpcRuntime> runtimes) {
+        for (NpcRuntime runtime : runtimes) {
+            if (!PacketPlayerSwimSupport.usesSwimMotion(runtime)) {
+                continue;
+            }
+            PacketPlayerSwimSupport.tick(runtime);
+        }
     }
 }

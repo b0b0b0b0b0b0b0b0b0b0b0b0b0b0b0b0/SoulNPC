@@ -17,7 +17,7 @@ public final class NpcAnimationData {
             @CommentValue(" Тип: NONE, SWING_ARM, SWING_OFF_HAND, WAVE, GREET, BOW, IDLE_SWAY, CUSTOM, MOB_POSE"),
             @CommentValue(" Пакеты: HURT, CRITICAL_HIT, MAGIC_CRITICAL_HIT, WAKE_UP"),
             @CommentValue(" Позы: SPIN_ATTACK (riptide/трезубец), FALL_FLYING, CROUCH, SLEEP, SWIM"),
-            @CommentValue(" Руки: USE_MAIN_HAND (зарядка), USE_OFF_HAND; алиасы: TRIDENT, RIPTIDE, TRIDENT_CHARGE")
+            @CommentValue(" Руки: USE_MAIN_HAND (зарядка), USE_OFF_HAND")
     })
     public NpcAnimationType type = NpcAnimationType.NONE;
 

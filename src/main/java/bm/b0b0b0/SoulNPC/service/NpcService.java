@@ -1,33 +1,47 @@
 package bm.b0b0b0.SoulNPC.service;
 
+import bm.b0b0b0.SoulNPC.api.event.SoulNpcCreateEvent;
+import bm.b0b0b0.SoulNPC.api.event.SoulNpcDeleteEvent;
 import bm.b0b0b0.SoulNPC.model.NpcDisplayType;
 import bm.b0b0b0.SoulNPC.model.NpcEntityPose;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
 import bm.b0b0b0.SoulNPC.model.NpcMobDisplayPose;
 import bm.b0b0b0.SoulNPC.model.NpcPoseData;
+import bm.b0b0b0.SoulNPC.model.NpcSkinSource;
 import bm.b0b0b0.SoulNPC.repository.NpcRepository;
 import bm.b0b0b0.SoulNPC.util.NpcLocationUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Optional;
 import java.util.function.Consumer;
 
 public final class NpcService {
 
-    private final NpcRepository repository;
-    private final NpcSpawnService spawnService;
-    private final NpcDefaultsFactory defaultsFactory;
+    private record Deps(
+            JavaPlugin plugin,
+            NpcRepository repository,
+            NpcSpawnService spawnService,
+            NpcDefaultsFactory defaultsFactory
+    ) {
+    }
+
+    private final Deps deps;
     private NpcPoseData poseBuffer;
 
-    public NpcService(NpcRepository repository, NpcSpawnService spawnService, NpcDefaultsFactory defaultsFactory) {
-        this.repository = repository;
-        this.spawnService = spawnService;
-        this.defaultsFactory = defaultsFactory;
+    public NpcService(
+            JavaPlugin plugin,
+            NpcRepository repository,
+            NpcSpawnService spawnService,
+            NpcDefaultsFactory defaultsFactory
+    ) {
+        this.deps = new Deps(plugin, repository, spawnService, defaultsFactory);
     }
 
     public Optional<NpcRuntime> findRuntime(String id) {
-        return spawnService.findRuntime(id);
+        return deps.spawnService().findRuntime(id);
     }
 
     public boolean createAt(Player player, String id) {
@@ -54,41 +68,72 @@ public final class NpcService {
             String entityType,
             NpcMobDisplayPose mobDisplayPose
     ) {
-        if (repository.findById(id).isPresent()) {
+        if (deps.repository().findById(id).isPresent()) {
             return false;
         }
-        NpcFileData data = defaultsFactory.createFromPlayer(player, id, type, entityType, mobDisplayPose);
-        repository.save(data);
-        spawnService.createRuntime(data);
+        NpcFileData data = deps.defaultsFactory().createFromPlayer(player, id, type, entityType, mobDisplayPose);
+        return create(data);
+    }
+
+    public boolean create(NpcFileData data) {
+        if (data == null || data.id == null || data.id.isBlank()) {
+            return false;
+        }
+        if (deps.repository().findById(data.id).isPresent()) {
+            return false;
+        }
+        data.prepareForYamlSave();
+        SoulNpcCreateEvent event = new SoulNpcCreateEvent(data);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return false;
+        }
+        deps.repository().save(data);
+        deps.spawnService().createRuntime(data);
         return true;
     }
 
     public boolean respawn(String id) {
-        return spawnService.respawn(id);
+        return deps.spawnService().respawn(id);
     }
 
     public boolean delete(String id) {
-        if (repository.findById(id).isEmpty()) {
+        Optional<NpcFileData> optional = deps.repository().findById(id);
+        if (optional.isEmpty()) {
             return false;
         }
-        spawnService.removeRuntime(id);
-        repository.delete(id);
+        NpcFileData data = optional.get();
+        SoulNpcDeleteEvent event = new SoulNpcDeleteEvent(data);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return false;
+        }
+        deps.spawnService().removeRuntime(id);
+        deps.repository().delete(id);
         return true;
     }
 
     public void reload() {
-        spawnService.reloadAll();
+        deps.spawnService().reloadAll();
     }
 
     public void saveAndRefresh(String id) {
-        repository.findById(id).ifPresent(data -> {
-            repository.save(data);
-            spawnService.refreshHolograms(id);
+        deps.repository().findById(id).ifPresent(data -> {
+            deps.repository().save(data);
+            deps.spawnService().refreshHolograms(id);
         });
     }
 
+    public void refreshEquipment(String id) {
+        deps.spawnService().refreshEquipment(id);
+    }
+
+    public void refreshGlow(String id) {
+        deps.spawnService().refreshGlow(id);
+    }
+
     public boolean teleportToPlayer(String id, Player player) {
-        Optional<NpcFileData> optional = repository.findById(id);
+        Optional<NpcFileData> optional = deps.repository().findById(id);
         if (optional.isEmpty()) {
             return false;
         }
@@ -100,40 +145,38 @@ public final class NpcService {
         data.z = location.getZ();
         data.yaw = location.getYaw();
         data.pitch = location.getPitch();
-        repository.save(data);
-        spawnService.relocate(id);
+        deps.repository().save(data);
+        deps.spawnService().relocate(id);
         return true;
     }
 
     public void burstGroundItems(String id) {
-        spawnService.burstGroundItems(id);
+        deps.spawnService().burstGroundItems(id);
     }
 
-    public boolean toggleLookAtPlayers(String id) {
-        Optional<NpcFileData> optional = repository.findById(id);
+    public void toggleLookAtPlayers(String id) {
+        Optional<NpcFileData> optional = deps.repository().findById(id);
         if (optional.isEmpty()) {
-            return false;
+            return;
         }
         NpcFileData data = optional.get();
         data.lookAtPlayers = !data.lookAtPlayers;
-        repository.save(data);
-        return true;
+        deps.repository().save(data);
     }
 
-    public boolean cyclePlayerEntityPose(String id, boolean reverse) {
-        Optional<NpcFileData> optional = repository.findById(id);
+    public void cyclePlayerEntityPose(String id, boolean reverse) {
+        Optional<NpcFileData> optional = deps.repository().findById(id);
         if (optional.isEmpty()) {
-            return false;
+            return;
         }
         NpcFileData data = optional.get();
         if (!data.appearance.type.isPlayerModel()) {
-            return false;
+            return;
         }
         NpcEntityPose next = NpcEntityPose.nextPlayerGuiPose(data.appearance.entityPose, reverse);
         data.appearance.entityPose = next;
-        repository.save(data);
-        spawnService.refreshPose(id);
-        return true;
+        deps.repository().save(data);
+        deps.spawnService().refreshPose(id);
     }
 
     public void copyPoseFrom(Player player) {
@@ -150,14 +193,14 @@ public final class NpcService {
         if (poseBuffer == null) {
             return false;
         }
-        Optional<NpcFileData> optional = repository.findById(id);
+        Optional<NpcFileData> optional = deps.repository().findById(id);
         if (optional.isEmpty()) {
             return false;
         }
         NpcFileData data = optional.get();
         data.pose = poseBuffer.copy();
-        repository.save(data);
-        spawnService.refreshPose(id);
+        deps.repository().save(data);
+        deps.spawnService().refreshPose(id);
         return true;
     }
 
@@ -166,7 +209,19 @@ public final class NpcService {
     }
 
     public boolean setSkin(String id, String profile, Runnable onReady, Consumer<Throwable> onError) {
-        Optional<NpcFileData> optional = repository.findById(id);
+        return setSkin(id, NpcSkinSource.NICK, profile, null, null, onReady, onError);
+    }
+
+    public boolean setSkin(
+            String id,
+            NpcSkinSource source,
+            String profile,
+            String skinUrl,
+            String skinFile,
+            Runnable onReady,
+            Consumer<Throwable> onError
+    ) {
+        Optional<NpcFileData> optional = deps.repository().findById(id);
         if (optional.isEmpty()) {
             return false;
         }
@@ -174,9 +229,12 @@ public final class NpcService {
         if (!data.appearance.type.isPlayerModel()) {
             return false;
         }
+        data.appearance.skinSource = source == null ? NpcSkinSource.NICK : source;
         data.appearance.profile = profile == null ? "" : profile.trim();
-        repository.save(data);
-        return spawnService.respawn(id, onReady, onError);
+        data.appearance.skinUrl = skinUrl == null ? "" : skinUrl.trim();
+        data.appearance.skinFile = skinFile == null ? "" : skinFile.trim();
+        deps.repository().save(data);
+        return deps.spawnService().respawn(id, onReady, onError);
     }
 
     public NpcPoseData poseBuffer() {

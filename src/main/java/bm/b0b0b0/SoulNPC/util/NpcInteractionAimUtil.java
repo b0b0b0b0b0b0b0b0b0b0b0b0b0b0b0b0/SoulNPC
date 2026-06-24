@@ -4,7 +4,6 @@ import bm.b0b0b0.SoulNPC.mob.NpcMobProfile;
 import bm.b0b0b0.SoulNPC.mob.NpcMobProfileRegistry;
 import bm.b0b0b0.SoulNPC.model.NpcEntityPose;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
-import bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil;
 
 public final class NpcInteractionAimUtil {
 
@@ -48,14 +47,6 @@ public final class NpcInteractionAimUtil {
             return playerRaycastVerticalHalf(data);
         }
         return NpcMobProfileRegistry.resolve(data).raycastVerticalHalf();
-    }
-
-    public static double eyeOrAimY(NpcFileData data) {
-        if (data.appearance.isPacketMob()) {
-            return aimCenterY(data);
-        }
-        var eyes = NpcLookAtUtil.npcEyes(data);
-        return eyes == null ? data.y + 1.62F * data.appearance.resolvedScale() : eyes.getY();
     }
 
     private static double playerRaycastCenterY(NpcFileData data) {

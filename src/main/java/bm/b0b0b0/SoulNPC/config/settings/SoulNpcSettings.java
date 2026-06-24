@@ -33,6 +33,13 @@ public final class SoulNpcSettings extends YamlSerializable {
 
     @NewLine
     @Comment(value = {
+            @CommentValue(" Хранение NPC: yaml (по умолчанию), sqlite, mysql"),
+            @CommentValue(" Смена type требует перезапуск сервера")
+    })
+    public Storage storage = new Storage();
+
+    @NewLine
+    @Comment(value = {
             @CommentValue(" Дефолты новых NPC (/soulnpc create)")
     })
     public NpcDefaults npcDefaults = new NpcDefaults();
@@ -50,7 +57,7 @@ public final class SoulNpcSettings extends YamlSerializable {
         @Comment(value = {
                 @CommentValue(" Смотреть на ближайшего игрока у новых player-NPC")
         })
-        public boolean lookAtPlayers = false;
+        public boolean lookAtPlayers = true;
     }
 
     public static final class General {
@@ -60,7 +67,7 @@ public final class SoulNpcSettings extends YamlSerializable {
         public String defaultLocale = "ru";
 
         @Comment(value = {
-                @CommentValue(" Папка с файлами NPC относительно папки плагина")
+                @CommentValue(" Устарело: используйте storage.yaml.folder")
         })
         public String npcFolder = "npcs";
 
@@ -68,6 +75,11 @@ public final class SoulNpcSettings extends YamlSerializable {
                 @CommentValue(" Автосоздание примера NPC при первом запуске")
         })
         public boolean createExampleNpc = false;
+
+        @Comment(value = {
+                @CommentValue(" Логи packet-spawn в консоль (entity id, профиль, этапы showTo)")
+        })
+        public boolean debugPackets = false;
     }
 
     public static final class Permissions {
@@ -96,9 +108,14 @@ public final class SoulNpcSettings extends YamlSerializable {
         public long defaultInteractionCooldownMs = 500L;
 
         @Comment(value = {
-                @CommentValue(" Дистанция показа packet-NPC (блоки)")
+                @CommentValue(" Дистанция показа packet-NPC и голограммы (блоки)")
         })
         public int packetViewDistance = 48;
+
+        @Comment(value = {
+                @CommentValue(" Дистанция голограммы (блоки); 0 = как packet-view-distance")
+        })
+        public int hologramViewDistance = 0;
 
         @Comment(value = {
                 @CommentValue(" Интервал проверки видимости packet-NPC (тики)")
@@ -109,6 +126,43 @@ public final class SoulNpcSettings extends YamlSerializable {
                 @CommentValue(" Сколько spawn/hide операций за один тик")
         })
         public int packetSpawnBatchSize = 48;
+    }
+
+    public static final class Storage {
+        @Comment(value = {
+                @CommentValue(" yaml | sqlite | mysql")
+        })
+        public String type = "yaml";
+
+        public YamlStorage yaml = new YamlStorage();
+        public SqliteStorage sqlite = new SqliteStorage();
+        public MySqlStorage mysql = new MySqlStorage();
+    }
+
+    public static final class YamlStorage {
+        @Comment(value = {
+                @CommentValue(" Папка YAML-файлов NPC относительно папки плагина")
+        })
+        public String folder = "npcs";
+    }
+
+    public static final class SqliteStorage {
+        @Comment(value = {
+                @CommentValue(" Путь к SQLite-файлу относительно папки плагина")
+        })
+        public String file = "storage/soulnpc.db";
+    }
+
+    public static final class MySqlStorage {
+        public String host = "localhost";
+        public int port = 3306;
+        public String database = "soulnpc";
+        public String username = "root";
+        public String password = "";
+        @Comment(value = {
+                @CommentValue(" Размер пула HikariCP")
+        })
+        public int poolSize = 10;
     }
 
     public static final class Appearance {

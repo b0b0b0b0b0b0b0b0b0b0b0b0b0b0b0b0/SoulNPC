@@ -9,7 +9,7 @@ import bm.b0b0b0.SoulNPC.config.settings.SoulNpcSerializerConfig;
 public final class NpcFileData extends YamlSerializable {
 
     @Comment(value = {
-            @CommentValue(" Уникальный ID NPC")
+            @CommentValue(" Внутренний ID (имя файла npcs/<id>.yml); при create без id — 1, 2, 3…")
     })
     public String id = "example";
 
@@ -55,14 +55,15 @@ public final class NpcFileData extends YamlSerializable {
 
     @NewLine
     @Comment(value = {
-            @CommentValue(" Клики: команды на ПКМ / ЛКМ / СКМ / Shift")
+            @CommentValue(" Клики по NPC — см. комментарии внутри interaction:"),
+            @CommentValue(" префиксы [message]/[player]/[console]/[op], permission, звуки")
     })
     public NpcInteractionData interaction = new NpcInteractionData();
 
     @Comment(value = {
             @CommentValue(" Смотреть на ближайшего игрока в радиусе")
     })
-    public boolean lookAtPlayers = false;
+    public boolean lookAtPlayers = true;
 
     @Comment(value = {
             @CommentValue(" Радиус слежения за игроком (блоки)")
@@ -75,6 +76,20 @@ public final class NpcFileData extends YamlSerializable {
     })
     public NpcGroundItemEffectData groundItems = new NpcGroundItemEffectData();
 
+    @NewLine
+    @Comment(value = {
+            @CommentValue(" Per-NPC дистанция packet-модели (0 = из config performance)"),
+            @CommentValue(" hologramViewDistance: 0 = packetViewDistance или global hologram")
+    })
+    public int packetViewDistance = 0;
+
+    public int hologramViewDistance = 0;
+
+    @Comment(value = {
+            @CommentValue(" Permission для видимости NPC (пусто = все)")
+    })
+    public String visibilityPermission = "";
+
     public NpcFileData() {
         super(SoulNpcSerializerConfig.INSTANCE);
     }
@@ -84,9 +99,10 @@ public final class NpcFileData extends YamlSerializable {
         this.id = id;
     }
 
-    /** Перед первым save — все секции yaml заполнены дефолтами. */
     public void prepareForYamlSave() {
+        appearance.normalizePresentation();
         appearance.ensureEquipmentSlots();
+        appearance.ensureMobEquipment();
         if (pose == null) {
             pose = NpcPoseData.defaultPlayerPose();
         }
@@ -94,5 +110,6 @@ public final class NpcFileData extends YamlSerializable {
             groundItems = new NpcGroundItemEffectData();
         }
         groundItems.ensureItems();
+        interaction.ensureActionsMigrated();
     }
 }

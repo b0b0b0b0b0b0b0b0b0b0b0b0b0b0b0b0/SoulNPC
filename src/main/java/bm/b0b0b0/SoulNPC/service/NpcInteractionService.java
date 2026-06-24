@@ -1,9 +1,14 @@
 package bm.b0b0b0.SoulNPC.service;
 
+import bm.b0b0b0.SoulNPC.api.event.SoulNpcClickEvent;
 import bm.b0b0b0.SoulNPC.config.PluginConfig;
 import bm.b0b0b0.SoulNPC.lang.MessageService;
+import bm.b0b0b0.SoulNPC.model.NpcClickBinding;
 import bm.b0b0b0.SoulNPC.model.NpcClickType;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
+import bm.b0b0b0.SoulNPC.model.NpcInteractionAction;
+import bm.b0b0b0.SoulNPC.model.NpcInteractionActionParser;
+import bm.b0b0b0.SoulNPC.model.NpcInteractionData;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -22,49 +27,68 @@ public final class NpcInteractionService {
     private final JavaPlugin plugin;
     private final PluginConfig pluginConfig;
     private final MessageService messageService;
+    private final ProxyTransferService proxyTransferService;
     private final Map<String, Long> cooldowns = new HashMap<>();
     private final Map<String, Long> clickDedupe = new ConcurrentHashMap<>();
 
-    public NpcInteractionService(JavaPlugin plugin, PluginConfig pluginConfig, MessageService messageService) {
+    public NpcInteractionService(
+            JavaPlugin plugin,
+            PluginConfig pluginConfig,
+            MessageService messageService,
+            ProxyTransferService proxyTransferService
+    ) {
         this.plugin = plugin;
         this.pluginConfig = pluginConfig;
         this.messageService = messageService;
+        this.proxyTransferService = proxyTransferService;
     }
 
-    public boolean handleClick(Player player, NpcRuntime runtime, NpcClickType clickType) {
+    public void handleClick(Player player, NpcRuntime runtime, NpcClickType clickType) {
         NpcFileData data = runtime.data();
+        data.interaction.ensureActionsMigrated();
         if (!markClick(player.getUniqueId(), data.id, clickType)) {
-            return false;
+            return;
         }
         if (!data.enabled || !data.interaction.enabled) {
             player.sendMessage(messageService.message(player, "interaction.disabled"));
             playSound(player, data.interaction.denySound);
-            return false;
+            return;
         }
         String usePermission = pluginConfig.settings().permissions.use;
         if (!player.hasPermission(usePermission)) {
             player.sendMessage(messageService.message(player, "interaction.no-permission"));
             playSound(player, data.interaction.denySound);
-            return false;
+            return;
         }
-        if (data.interaction.permission != null && !data.interaction.permission.isBlank() && !player.hasPermission(data.interaction.permission)) {
+        if (data.interaction.permission != null && !data.interaction.permission.isBlank()
+                && !player.hasPermission(data.interaction.permission)) {
             player.sendMessage(messageService.message(player, "interaction.no-permission"));
             playSound(player, data.interaction.denySound);
-            return false;
+            return;
         }
         if (!player.hasPermission(pluginConfig.settings().permissions.bypassCooldown) && isOnCooldown(player, data)) {
             player.sendMessage(messageService.message(player, "interaction.cooldown"));
             playSound(player, data.interaction.denySound);
-            return false;
+            return;
         }
-        List<String> commands = commandsFor(data, clickType);
-        if (commands == null || commands.isEmpty()) {
-            return false;
+        SoulNpcClickEvent clickEvent = new SoulNpcClickEvent(player, data, clickType);
+        Bukkit.getPluginManager().callEvent(clickEvent);
+        if (clickEvent.isCancelled()) {
+            return;
+        }
+        List<NpcInteractionAction> actions = data.interaction.actionsFor(clickType);
+        if (actions.isEmpty() && NpcInteractionData.hasActionableCommands(commandsForLegacy(data, clickType))) {
+            setCooldown(player, data);
+            playSound(player, data.interaction.clickSound);
+            Bukkit.getScheduler().runTask(plugin, () -> dispatchLegacy(player, data.id, clickType, commandsForLegacy(data, clickType)));
+            return;
+        }
+        if (actions.isEmpty()) {
+            return;
         }
         setCooldown(player, data);
         playSound(player, data.interaction.clickSound);
-        Bukkit.getScheduler().runTask(plugin, () -> dispatchActions(player, data.id, commands));
-        return true;
+        dispatchActions(player, data.id, actions);
     }
 
     private boolean markClick(UUID playerId, String npcId, NpcClickType clickType) {
@@ -78,7 +102,7 @@ public final class NpcInteractionService {
         return true;
     }
 
-    private static List<String> commandsFor(NpcFileData data, NpcClickType clickType) {
+    private static List<String> commandsForLegacy(NpcFileData data, NpcClickType clickType) {
         return switch (clickType) {
             case LEFT -> data.interaction.leftClickCommands;
             case RIGHT -> data.interaction.rightClickCommands;
@@ -88,42 +112,67 @@ public final class NpcInteractionService {
         };
     }
 
-    private void dispatchActions(Player player, String npcId, List<String> commands) {
+    private void dispatchActions(Player player, String npcId, List<NpcInteractionAction> actions) {
+        int accumulatedDelay = 0;
+        for (NpcInteractionAction action : actions) {
+            accumulatedDelay += Math.max(0, action.delayTicks);
+            int runDelay = accumulatedDelay;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> executeAction(player, npcId, action), runDelay);
+        }
+    }
+
+    private void executeAction(Player player, String npcId, NpcInteractionAction action) {
+        if (action.cooldownSeconds > 0) {
+            String key = player.getUniqueId() + ":" + npcId + ":action:" + System.identityHashCode(action);
+            Long last = cooldowns.get(key);
+            long cooldownMs = action.cooldownSeconds * 1000L;
+            if (last != null && System.currentTimeMillis() - last < cooldownMs) {
+                return;
+            }
+            cooldowns.put(key, System.currentTimeMillis());
+        }
+        String value = applyPlaceholders(action.value, player, npcId);
+        switch (action.type) {
+            case MESSAGE -> sendMessage(player, value);
+            case SWITCH_SERVER -> proxyTransferService.transfer(player, value);
+            case CONSOLE_CMD -> executeCommand(player, value, CommandTarget.CONSOLE);
+            case OP_CMD -> executeCommand(player, value, CommandTarget.OP);
+            case PLAYER_CMD -> executeCommand(player, value, CommandTarget.PLAYER);
+        }
+    }
+
+    private void dispatchLegacy(Player player, String npcId, NpcClickType clickType, List<String> commands) {
+        NpcClickBinding binding = NpcClickBinding.fromClickType(clickType);
         for (String raw : commands) {
             if (raw == null || raw.isBlank()) {
                 continue;
             }
             String trimmed = raw.trim();
-            if (trimmed.regionMatches(true, 0, "[message]", 0, 9)) {
-                sendMessage(player, npcId, trimmed.substring(9).trim());
+            if (trimmed.startsWith("#")) {
                 continue;
             }
-            CommandTarget target = CommandTarget.PLAYER;
-            String command = trimmed;
-            if (trimmed.startsWith("[console]")) {
-                target = CommandTarget.CONSOLE;
-                command = trimmed.substring(9).trim();
-            } else if (trimmed.startsWith("[op]")) {
-                target = CommandTarget.OP;
-                command = trimmed.substring(4).trim();
-            } else if (trimmed.startsWith("[player]")) {
-                target = CommandTarget.PLAYER;
-                command = trimmed.substring(8).trim();
-            }
-            command = applyPlaceholders(command, player, npcId);
-            if (command.startsWith("/")) {
-                command = command.substring(1);
-            }
-            execute(player, command, target);
+            NpcInteractionAction action = NpcInteractionActionParser.fromLegacyLine(trimmed, binding);
+            executeAction(player, npcId, action);
         }
     }
 
-    private void sendMessage(Player player, String npcId, String text) {
-        if (text.isBlank()) {
+    private void sendMessage(Player player, String text) {
+        if (text == null || text.isBlank()) {
             return;
         }
-        String resolved = applyPlaceholders(text, player, npcId);
+        String resolved = PlaceholderService.apply(player, text);
         player.sendMessage(messageService.raw(resolved));
+    }
+
+    private void executeCommand(Player player, String command, CommandTarget target) {
+        if (command == null || command.isBlank()) {
+            return;
+        }
+        String resolved = PlaceholderService.apply(player, applyPlaceholders(command, player, ""));
+        if (resolved.startsWith("/")) {
+            resolved = resolved.substring(1);
+        }
+        execute(player, resolved, target);
     }
 
     private static String applyPlaceholders(String input, Player player, String npcId) {

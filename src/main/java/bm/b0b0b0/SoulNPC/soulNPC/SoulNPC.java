@@ -1,5 +1,7 @@
 package bm.b0b0b0.SoulNPC.soulNPC;
 
+import bm.b0b0b0.SoulNPC.api.NpcRegistryImpl;
+import bm.b0b0b0.SoulNPC.api.SoulNpcApi;
 import bm.b0b0b0.SoulNPC.command.SoulNpcCommand;
 import bm.b0b0b0.SoulNPC.config.PluginConfig;
 import bm.b0b0b0.SoulNPC.appearance.ItemStackFactory;
@@ -10,6 +12,7 @@ import bm.b0b0b0.SoulNPC.gui.GuiChatInputService;
 import bm.b0b0b0.SoulNPC.lang.MessageService;
 import bm.b0b0b0.SoulNPC.hologram.NpcTextLabels;
 import bm.b0b0b0.SoulNPC.listener.GuiChatInputListener;
+import bm.b0b0b0.SoulNPC.listener.NpcInspectorStickGuardListener;
 import bm.b0b0b0.SoulNPC.listener.NpcInspectorListener;
 import bm.b0b0b0.SoulNPC.listener.NpcAimInteractListener;
 import bm.b0b0b0.SoulNPC.listener.NpcGroundItemListener;
@@ -21,11 +24,17 @@ import bm.b0b0b0.SoulNPC.packet.PacketNpcAnimator;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcGreetService;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcLookAtService;
 import bm.b0b0b0.SoulNPC.packet.PacketNpcViewerService;
+import bm.b0b0b0.SoulNPC.repository.CachedNpcRepository;
 import bm.b0b0b0.SoulNPC.repository.NpcRepository;
-import bm.b0b0b0.SoulNPC.repository.YamlNpcRepository;
+import bm.b0b0b0.SoulNPC.storage.DatabaseLifecycle;
+import bm.b0b0b0.SoulNPC.storage.NpcMigrationService;
+import bm.b0b0b0.SoulNPC.storage.NpcRepositoryFactory;
+import bm.b0b0b0.SoulNPC.storage.NpcStorageBackend;
 import bm.b0b0b0.SoulNPC.service.NpcAnimationService;
 import bm.b0b0b0.SoulNPC.service.NpcDefaultsFactory;
 import bm.b0b0b0.SoulNPC.service.NpcInteractionService;
+import bm.b0b0b0.SoulNPC.service.PlaceholderService;
+import bm.b0b0b0.SoulNPC.service.ProxyTransferService;
 import bm.b0b0b0.SoulNPC.service.NpcService;
 import bm.b0b0b0.SoulNPC.service.NpcSpawnService;
 import bm.b0b0b0.SoulNPC.util.SoulNpcKeys;
@@ -40,6 +49,8 @@ public final class SoulNPC extends JavaPlugin {
     private NpcRepository npcRepository;
     private NpcSpawnService spawnService;
     private NpcService npcService;
+    private DatabaseLifecycle databaseLifecycle;
+    private NpcMigrationService migrationService;
 
     @Override
     public void onEnable() {
@@ -59,12 +70,13 @@ public final class SoulNPC extends JavaPlugin {
             getLogger().info("SkinRestorer подключён — скины NPC из базы SR.");
         }
         SoulNpcKeys soulNpcKeys = new SoulNpcKeys(this);
-        NpcTextLabels textLabels = new NpcTextLabels(soulNpcKeys);
+        NpcTextLabels textLabels = new NpcTextLabels(this, pluginConfig, itemStackFactory, soulNpcKeys);
         PacketNpcViewerService viewerService = new PacketNpcViewerService(
                 this,
                 pluginConfig,
                 skinService,
-                itemStackFactory
+                itemStackFactory,
+                textLabels
         );
         PacketNpcAnimator packetNpcAnimator = new PacketNpcAnimator();
         PacketNpcLookAtService lookAtService = new PacketNpcLookAtService();
@@ -79,9 +91,14 @@ public final class SoulNPC extends JavaPlugin {
                 mobPoseService
         );
         NpcGroundItemEffectService groundItemEffectService = new NpcGroundItemEffectService(this, soulNpcKeys);
+        ProxyTransferService proxyTransferService = new ProxyTransferService(this);
+        proxyTransferService.init();
+        PlaceholderService.init(this);
 
-        npcRepository = new YamlNpcRepository(this, pluginConfig);
-        npcRepository.reload();
+        databaseLifecycle = new DatabaseLifecycle();
+        NpcStorageBackend storageBackend = NpcRepositoryFactory.createActiveBackend(this, pluginConfig, databaseLifecycle);
+        npcRepository = new CachedNpcRepository(this, storageBackend);
+        migrationService = new NpcMigrationService(this, pluginConfig, databaseLifecycle);
 
         spawnService = new NpcSpawnService(
                 this,
@@ -94,14 +111,17 @@ public final class SoulNPC extends JavaPlugin {
                 groundItemEffectService
         );
         textLabels.bind(spawnService);
-        NpcInteractionService interactionService = new NpcInteractionService(this, pluginConfig, messageService);
-        npcService = new NpcService(npcRepository, spawnService, new NpcDefaultsFactory(pluginConfig));
-
-        spawnService.reloadAll();
-        spawnService.start();
+        NpcInteractionService interactionService = new NpcInteractionService(
+                this,
+                pluginConfig,
+                messageService,
+                proxyTransferService
+        );
+        npcService = new NpcService(this, npcRepository, spawnService, new NpcDefaultsFactory(pluginConfig));
+        SoulNpcApi.register(new SoulNpcApi(new NpcRegistryImpl(npcRepository, npcService)));
 
         PacketEvents.getAPI().getEventManager().registerListener(
-                new PacketNpcInteractListener(this, spawnService, interactionService)
+                new PacketNpcInteractListener(spawnService, interactionService)
         );
 
         AdminNpcMenuListener adminMenuListener = new AdminNpcMenuListener(
@@ -109,9 +129,12 @@ public final class SoulNPC extends JavaPlugin {
                 pluginConfig,
                 messageService,
                 npcRepository,
-                npcService
+                npcService,
+                itemStackFactory,
+                soulNpcKeys
         );
         GuiChatInputService chatInputService = new GuiChatInputService(
+                pluginConfig,
                 messageService,
                 npcRepository,
                 npcService,
@@ -127,16 +150,27 @@ public final class SoulNPC extends JavaPlugin {
                 skinService,
                 adminMenuListener,
                 chatInputService,
-                soulNpcKeys
+                soulNpcKeys,
+                migrationService
         );
+
+        ((CachedNpcRepository) npcRepository).initialLoad(() -> {
+            spawnService.bootstrapLoadedNpcs();
+            spawnService.start();
+            getLogger().info("SoulNPC ready — storage: " + storageBackend.type().configKey() + ".");
+        });
 
         getServer().getPluginManager().registerEvents(new PlayerNpcLifecycleListener(spawnService), this);
         getServer().getPluginManager().registerEvents(new NpcHologramListener(spawnService, textLabels), this);
         getServer().getPluginManager().registerEvents(new NpcGroundItemListener(groundItemEffectService), this);
         getServer().getPluginManager().registerEvents(adminMenuListener, this);
-        getServer().getPluginManager().registerEvents(new GuiChatInputListener(this, chatInputService), this);
+        getServer().getPluginManager().registerEvents(new GuiChatInputListener(chatInputService), this);
         getServer().getPluginManager().registerEvents(
-                new NpcInspectorListener(spawnService, messageService, soulNpcKeys),
+                new NpcInspectorStickGuardListener(this, soulNpcKeys),
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                new NpcInspectorListener(spawnService, pluginConfig, messageService, soulNpcKeys),
                 this
         );
         getServer().getPluginManager().registerEvents(
@@ -147,14 +181,16 @@ public final class SoulNPC extends JavaPlugin {
         var pluginCommand = getCommand("soulnpc");
         pluginCommand.setExecutor(command);
         pluginCommand.setTabCompleter(command);
-
-        getLogger().info("SoulNPC enabled — packet PLAYER NPCs (PacketEvents).");
     }
 
     @Override
     public void onDisable() {
+        SoulNpcApi.unregister();
         if (spawnService != null) {
             spawnService.stop();
+        }
+        if (databaseLifecycle != null) {
+            databaseLifecycle.closeAll();
         }
     }
 

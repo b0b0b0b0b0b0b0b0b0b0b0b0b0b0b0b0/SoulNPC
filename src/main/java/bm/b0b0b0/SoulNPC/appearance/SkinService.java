@@ -1,7 +1,8 @@
 package bm.b0b0b0.SoulNPC.appearance;
 
+import bm.b0b0b0.SoulNPC.model.NpcAppearanceData;
+import bm.b0b0b0.SoulNPC.model.NpcSkinSource;
 import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -22,17 +23,61 @@ public final class SkinService {
         return skinRestorerHook.tryInit();
     }
 
-    public boolean isSkinRestorerAvailable() {
-        return skinRestorerHook.isAvailable();
-    }
-
     public String resolveProfileKeyForPlayer(Player player) {
         return skinRestorerHook.resolveProfileKey(player);
     }
 
     public void resolveProfile(String profileName, Consumer<PlayerProfile> onReady, Consumer<Throwable> onError) {
         String name = profileName == null || profileName.isBlank() ? "Steve" : profileName.trim();
+        resolveNick(name, onReady, onError);
+    }
 
+    public String profileKey(NpcAppearanceData appearance, String fallback) {
+        return SkinTextureResolver.profileKey(appearance, fallback);
+    }
+
+    public void resolveAppearance(
+            NpcAppearanceData appearance,
+            String fallbackName,
+            Consumer<PlayerProfile> onReady,
+            Consumer<Throwable> onError
+    ) {
+        if (appearance == null) {
+            resolveProfile(fallbackName, onReady, onError);
+            return;
+        }
+        NpcSkinSource source = appearance.skinSource == null ? NpcSkinSource.NICK : appearance.skinSource;
+        String displayName = fallbackName == null || fallbackName.isBlank() ? "Steve" : fallbackName;
+        switch (source) {
+            case URL -> SkinTextureResolver.resolveUrl(
+                    plugin,
+                    appearance.skinUrl,
+                    displayName,
+                    onReady,
+                    onError
+            );
+            case FILE -> SkinTextureResolver.resolveFile(
+                    plugin,
+                    appearance.skinFile,
+                    displayName,
+                    onReady,
+                    onError
+            );
+            case MINESKIN_ID -> SkinTextureResolver.resolveMineskinId(
+                    plugin,
+                    appearance.profile,
+                    displayName,
+                    onReady,
+                    onError
+            );
+            case NICK -> {
+                String nick = appearance.profile == null || appearance.profile.isBlank() ? displayName : appearance.profile;
+                resolveNick(nick, onReady, onError);
+            }
+        }
+    }
+
+    private void resolveNick(String name, Consumer<PlayerProfile> onReady, Consumer<Throwable> onError) {
         Player online = Bukkit.getPlayerExact(name);
         if (online != null) {
             resolveOnlinePlayer(online, onReady, onError);
@@ -41,8 +86,8 @@ public final class SkinService {
 
         if (skinRestorerHook.isAvailable()) {
             plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-                skinRestorerHook.resolveOffline(name).ifPresentOrElse(
-                        texture -> deliverProfile(name, texture, onReady),
+                skinRestorerHook.resolveOfflineProfile(name).ifPresentOrElse(
+                        profile -> deliverProfile(profile, onReady),
                         () -> resolveViaMojang(name, onReady, onError)
                 );
             });
@@ -54,14 +99,10 @@ public final class SkinService {
 
     private void resolveOnlinePlayer(Player player, Consumer<PlayerProfile> onReady, Consumer<Throwable> onError) {
         Runnable deliver = () -> {
-            if (skinRestorerHook.isAvailable()) {
-                skinRestorerHook.resolveOnlinePlayer(player).ifPresentOrElse(
-                        texture -> deliverProfile(player.getName(), texture, onReady),
-                        () -> onReady.accept(player.getPlayerProfile())
-                );
-                return;
-            }
-            onReady.accept(player.getPlayerProfile());
+            skinRestorerHook.resolveOnlineProfile(player).ifPresentOrElse(
+                    profile -> deliverProfile(profile, onReady),
+                    () -> deliverProfile(SkinProfileFactory.copyProperties(player.getPlayerProfile()), onReady)
+            );
         };
         if (Bukkit.isPrimaryThread()) {
             deliver.run();
@@ -70,8 +111,8 @@ public final class SkinService {
         }
     }
 
-    private void deliverProfile(String displayName, ResolvedSkinTexture texture, Consumer<PlayerProfile> onReady) {
-        plugin.getServer().getScheduler().runTask(plugin, () -> onReady.accept(toPaperProfile(displayName, texture)));
+    private void deliverProfile(PlayerProfile profile, Consumer<PlayerProfile> onReady) {
+        plugin.getServer().getScheduler().runTask(plugin, () -> onReady.accept(profile));
     }
 
     private void resolveViaMojang(String name, Consumer<PlayerProfile> onReady, Consumer<Throwable> onError) {
@@ -83,11 +124,5 @@ public final class SkinService {
             }
             onReady.accept(updated);
         }));
-    }
-
-    private static PlayerProfile toPaperProfile(String displayName, ResolvedSkinTexture texture) {
-        PlayerProfile profile = Bukkit.createProfile(displayName);
-        profile.setProperty(new ProfileProperty("textures", texture.value(), texture.signature()));
-        return profile;
     }
 }

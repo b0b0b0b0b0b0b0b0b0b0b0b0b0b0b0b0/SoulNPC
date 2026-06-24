@@ -1,9 +1,15 @@
 package bm.b0b0b0.SoulNPC.hologram;
 
+import bm.b0b0b0.SoulNPC.appearance.ItemStackFactory;
+import bm.b0b0b0.SoulNPC.config.PluginConfig;
 import bm.b0b0b0.SoulNPC.model.NpcAppearanceData;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
+import bm.b0b0b0.SoulNPC.model.NpcHologramLineData;
+import bm.b0b0b0.SoulNPC.model.NpcHologramLineType;
+import bm.b0b0b0.SoulNPC.model.NpcEquipmentSlotData;
 import bm.b0b0b0.SoulNPC.service.NpcRuntime;
 import bm.b0b0b0.SoulNPC.service.NpcSpawnService;
+import bm.b0b0b0.SoulNPC.util.NpcViewDistance;
 import bm.b0b0b0.SoulNPC.util.SoulNpcKeys;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -13,8 +19,12 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
@@ -30,10 +40,16 @@ public final class NpcTextLabels {
     private static final float PLAYER_HEAD_TOP = 1.8F;
     private static final float HEAD_GAP = 0.12F;
 
+    private final JavaPlugin plugin;
+    private final PluginConfig pluginConfig;
+    private final ItemStackFactory itemStackFactory;
     private final SoulNpcKeys keys;
     private NpcSpawnService spawnService;
 
-    public NpcTextLabels(SoulNpcKeys keys) {
+    public NpcTextLabels(JavaPlugin plugin, PluginConfig pluginConfig, ItemStackFactory itemStackFactory, SoulNpcKeys keys) {
+        this.plugin = plugin;
+        this.pluginConfig = pluginConfig;
+        this.itemStackFactory = itemStackFactory;
         this.keys = keys;
     }
 
@@ -62,42 +78,117 @@ public final class NpcTextLabels {
         NpcAppearanceData appearance = data.appearance;
         appearance.migrateLegacyHologramOffsets();
 
-        List<HologramLine> lines = collectLines(appearance);
-        if (lines.isEmpty()) {
+        List<LayoutEntry> entries = collectLayoutEntries(appearance);
+        if (entries.stream().noneMatch(LayoutEntry::visible)) {
             return;
         }
 
         float lineHeight = Math.max(0.12F, appearance.hologramLineHeight);
         float spacing = Math.max(0.05F, appearance.hologramLineSpacing);
         float headTop = (float) data.y + PLAYER_HEAD_TOP * appearance.resolvedScale();
-        float bottomLineCenter = headTop + HEAD_GAP + lineHeight * lines.get(0).scale() * 0.5F;
+        float bottomLineCenter = headTop + HEAD_GAP + lineHeight * entries.get(0).scale() * 0.5F;
         float baseOffset = appearance.hologramBaseOffset;
         if (baseOffset > 0.0F) {
             bottomLineCenter = (float) data.y + baseOffset;
         }
 
         float currentCenterY = bottomLineCenter;
-        for (int index = 0; index < lines.size(); index++) {
-            HologramLine line = lines.get(index);
+        for (int index = 0; index < entries.size(); index++) {
+            LayoutEntry entry = entries.get(index);
             if (index > 0) {
-                HologramLine previous = lines.get(index - 1);
-                currentCenterY += lineHeight * previous.scale() * 0.5F + spacing + lineHeight * line.scale() * 0.5F;
+                LayoutEntry previous = entries.get(index - 1);
+                currentCenterY += lineHeight * previous.scale() * 0.5F + spacing + lineHeight * entry.scale() * 0.5F;
             }
-            UUID displayId = spawnLabel(
-                    data,
-                    base,
-                    line.role(),
-                    line.text(),
-                    currentCenterY,
-                    line.scale(),
-                    appearance
-            );
-            runtime.addHologramDisplay(displayId);
+            if (!entry.visible()) {
+                continue;
+            }
+            UUID displayId = entry.itemLine()
+                    ? spawnItemLabel(data, base, entry.role(), entry.lineData(), currentCenterY, entry.scale(), appearance)
+                    : spawnLabel(data, base, entry.role(), entry.text(), currentCenterY, entry.scale(), appearance);
+            if (displayId != null) {
+                runtime.addHologramDisplay(displayId);
+            }
+        }
+        syncVisibilityForAllPlayers(runtime);
+    }
+
+    public void updateVisibilityForPlayer(Player player, NpcRuntime runtime, int viewDistanceBlocks) {
+        NpcFileData data = runtime.data();
+        if (!data.appearance.useTextDisplay) {
+            applyHologramVisibility(player, runtime, false);
+            return;
+        }
+        if (runtime.hologramDisplayIds().isEmpty()) {
+            runtime.removeHologramViewer(player.getUniqueId());
+            return;
+        }
+        boolean visible = data.enabled
+                && NpcViewDistance.canSee(player, data)
+                && NpcViewDistance.isWithin(player, data, viewDistanceBlocks);
+        applyHologramVisibility(player, runtime, visible);
+    }
+
+    public void hideFromPlayer(Player player, NpcRuntime runtime) {
+        applyHologramVisibility(player, runtime, false);
+    }
+
+    public void showToPlayer(Player player, NpcRuntime runtime) {
+        NpcFileData data = runtime.data();
+        if (!data.appearance.useTextDisplay || runtime.hologramDisplayIds().isEmpty()) {
+            return;
+        }
+        int viewDistance = NpcViewDistance.hologramBlocks(pluginConfig.settings().performance, data);
+        if (!data.enabled || !NpcViewDistance.canSee(player, data) || !NpcViewDistance.isWithin(player, data, viewDistance)) {
+            applyHologramVisibility(player, runtime, false);
+            return;
+        }
+        applyHologramVisibility(player, runtime, true);
+    }
+
+    private void applyHologramVisibility(Player player, NpcRuntime runtime, boolean visible) {
+        for (UUID displayId : runtime.hologramDisplayIds()) {
+            Entity entity = Bukkit.getEntity(displayId);
+            if (entity == null) {
+                continue;
+            }
+            if (visible) {
+                if (!player.canSee(entity)) {
+                    player.showEntity(plugin, entity);
+                }
+            } else if (player.canSee(entity)) {
+                player.hideEntity(plugin, entity);
+            }
+        }
+        if (visible) {
+            runtime.addHologramViewer(player.getUniqueId());
+        } else {
+            runtime.removeHologramViewer(player.getUniqueId());
+        }
+    }
+
+    private void hideFromAllPlayers(NpcRuntime runtime) {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            applyHologramVisibility(player, runtime, false);
+        }
+    }
+
+    private void syncVisibilityForAllPlayers(NpcRuntime runtime) {
+        NpcFileData data = runtime.data();
+        int viewDistance = NpcViewDistance.hologramBlocks(pluginConfig.settings().performance, data);
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            updateVisibilityForPlayer(player, runtime, viewDistance);
         }
     }
 
     public void remove(NpcRuntime runtime) {
-        for (UUID displayId : runtime.hologramDisplayIds()) {
+        NpcFileData data = runtime.data();
+        World world = Bukkit.getWorld(data.world);
+        if (world != null) {
+            hideFromAllPlayers(runtime);
+            Location base = new Location(world, data.x, data.y, data.z);
+            removeTaggedInChunk(world, data.id, base);
+        }
+        for (UUID displayId : new ArrayList<>(runtime.hologramDisplayIds())) {
             Entity entity = Bukkit.getEntity(displayId);
             if (entity != null && spawnService != null) {
                 spawnService.unregisterHologramEntity(entity.getEntityId());
@@ -113,7 +204,6 @@ public final class NpcTextLabels {
         }
     }
 
-    /** Удаляет все TextDisplay с PDC плагина в загруженных чанках (сироты после краша / reload). */
     public int purgeAllPluginDisplays() {
         int removed = 0;
         for (World world : Bukkit.getWorlds()) {
@@ -146,7 +236,7 @@ public final class NpcTextLabels {
     }
 
     private boolean removeIfPluginDisplay(Entity entity) {
-        if (!(entity instanceof TextDisplay)) {
+        if (!(entity instanceof TextDisplay) && !(entity instanceof ItemDisplay)) {
             return false;
         }
         if (!isPluginDisplay(entity)) {
@@ -181,24 +271,35 @@ public final class NpcTextLabels {
         return entity.getPersistentDataContainer().has(keys.npcId, PersistentDataType.STRING);
     }
 
-    private static List<HologramLine> collectLines(NpcAppearanceData appearance) {
-        List<HologramLine> lines = new ArrayList<>();
+    private static List<LayoutEntry> collectLayoutEntries(NpcAppearanceData appearance) {
+        List<LayoutEntry> entries = new ArrayList<>();
         if (hasText(appearance.name)) {
-            lines.add(new HologramLine("name", appearance.name, appearance.nameDisplayScale));
-        }
-        if (hasText(appearance.description)) {
-            lines.add(new HologramLine("description", appearance.description, appearance.descriptionDisplayScale));
-        }
-        if (appearance.extraLines != null) {
-            int extraIndex = 0;
-            for (String extra : appearance.extraLines) {
-                if (!hasText(extra)) {
-                    continue;
-                }
-                lines.add(new HologramLine("line-" + extraIndex++, extra, appearance.descriptionDisplayScale));
+            if (appearance.nameHidden) {
+                entries.add(LayoutEntry.gap("name", appearance.nameDisplayScale));
+            } else {
+                entries.add(LayoutEntry.visible("name", appearance.name, appearance.nameDisplayScale));
             }
         }
-        return lines;
+        if (appearance.extraLines != null) {
+            for (int extraIndex = 0; extraIndex < appearance.extraLines.size(); extraIndex++) {
+                NpcHologramLineData extra = appearance.extraLines.get(extraIndex);
+                if (extra == null || !extra.hasContent()) {
+                    continue;
+                }
+                String role = "line-" + extraIndex;
+                float lineScale = extra.lineType == NpcHologramLineType.ITEM
+                        ? extra.resolvedScale()
+                        : appearance.descriptionDisplayScale;
+                if (extra.hidden) {
+                    entries.add(LayoutEntry.gap(role, lineScale));
+                } else if (extra.lineType == NpcHologramLineType.ITEM) {
+                    entries.add(LayoutEntry.visibleItem(role, extra, lineScale));
+                } else {
+                    entries.add(LayoutEntry.visible(role, extra.text, lineScale));
+                }
+            }
+        }
+        return entries;
     }
 
     private UUID spawnLabel(
@@ -244,6 +345,54 @@ public final class NpcTextLabels {
         return display.getUniqueId();
     }
 
+    private UUID spawnItemLabel(
+            NpcFileData data,
+            Location base,
+            String role,
+            NpcHologramLineData line,
+            float y,
+            float scale,
+            NpcAppearanceData appearance
+    ) {
+        ItemStack item = createHologramItem(line);
+        if (item == null || item.isEmpty()) {
+            return null;
+        }
+        Location location = new Location(base.getWorld(), base.getX(), y, base.getZ());
+        float resolvedScale = scale <= 0.0F ? 1.0F : scale;
+        ItemDisplay display = base.getWorld().spawn(location, ItemDisplay.class, entity -> {
+            entity.setItemStack(item);
+            entity.setBillboard(Display.Billboard.CENTER);
+            entity.setPersistent(false);
+            entity.setInvulnerable(true);
+            entity.setGravity(false);
+            entity.setTransformation(new Transformation(
+                    new Vector3f(0.0F, 0.0F, 0.0F),
+                    new AxisAngle4f(0.0F, 0.0F, 0.0F, 1.0F),
+                    new Vector3f(resolvedScale, resolvedScale, resolvedScale),
+                    new AxisAngle4f(0.0F, 0.0F, 0.0F, 1.0F)
+            ));
+            entity.getPersistentDataContainer().set(keys.npcId, PersistentDataType.STRING, data.id);
+            entity.getPersistentDataContainer().set(keys.entityRole, PersistentDataType.STRING, role);
+        });
+        if (spawnService != null && !data.appearance.isPacketMob()) {
+            spawnService.registerHologramEntity(display.getEntityId(), data.id);
+        }
+        return display.getUniqueId();
+    }
+
+    private ItemStack createHologramItem(NpcHologramLineData line) {
+        if (line == null) {
+            return ItemStack.empty();
+        }
+        NpcEquipmentSlotData slot = new NpcEquipmentSlotData();
+        slot.material = line.material;
+        slot.customModelData = line.customModelData;
+        slot.itemsAdderId = line.itemsAdderId;
+        slot.nexoId = line.nexoId;
+        return itemStackFactory.create(slot);
+    }
+
     private void removeTaggedInChunk(World world, String npcId, Location base) {
         int chunkX = base.getBlockX() >> 4;
         int chunkZ = base.getBlockZ() >> 4;
@@ -251,12 +400,12 @@ public final class NpcTextLabels {
             return;
         }
         for (Entity entity : world.getChunkAt(chunkX, chunkZ).getEntities()) {
-            if (!(entity instanceof TextDisplay display)) {
+            if (!(entity instanceof TextDisplay) && !(entity instanceof ItemDisplay)) {
                 continue;
             }
-            String taggedId = display.getPersistentDataContainer().get(keys.npcId, PersistentDataType.STRING);
+            String taggedId = entity.getPersistentDataContainer().get(keys.npcId, PersistentDataType.STRING);
             if (npcId.equals(taggedId)) {
-                display.remove();
+                entity.remove();
             }
         }
     }
@@ -275,6 +424,24 @@ public final class NpcTextLabels {
         return value != null && !value.isBlank();
     }
 
-    private record HologramLine(String role, String text, float scale) {
+    private record LayoutEntry(
+            String role,
+            String text,
+            NpcHologramLineData lineData,
+            float scale,
+            boolean visible,
+            boolean itemLine
+    ) {
+        private static LayoutEntry visible(String role, String text, float scale) {
+            return new LayoutEntry(role, text, null, scale, true, false);
+        }
+
+        private static LayoutEntry visibleItem(String role, NpcHologramLineData line, float scale) {
+            return new LayoutEntry(role, "", line, scale, true, true);
+        }
+
+        private static LayoutEntry gap(String role, float scale) {
+            return new LayoutEntry(role, "", null, scale, false, false);
+        }
     }
 }

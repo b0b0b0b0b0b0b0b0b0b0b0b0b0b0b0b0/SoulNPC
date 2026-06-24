@@ -12,18 +12,16 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientIn
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPickItemFromEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Optional;
 
 public final class PacketNpcInteractListener extends PacketListenerAbstract {
 
-    private final Plugin plugin;
     private final NpcSpawnService spawnService;
     private final NpcInteractionService interactionService;
 
-    public PacketNpcInteractListener(Plugin plugin, NpcSpawnService spawnService, NpcInteractionService interactionService) {
-        this.plugin = plugin;
+    public PacketNpcInteractListener(NpcSpawnService spawnService, NpcInteractionService interactionService) {
         this.spawnService = spawnService;
         this.interactionService = interactionService;
     }
@@ -73,6 +71,7 @@ public final class PacketNpcInteractListener extends PacketListenerAbstract {
 
     private void dispatchClick(PacketReceiveEvent event, Player player, NpcRuntime runtime, NpcClickType clickType) {
         event.setCancelled(true);
+        JavaPlugin plugin = JavaPlugin.getProvidingPlugin(PacketNpcInteractListener.class);
         Bukkit.getScheduler().runTask(plugin, () ->
                 interactionService.handleClick(player, runtime, clickType)
         );

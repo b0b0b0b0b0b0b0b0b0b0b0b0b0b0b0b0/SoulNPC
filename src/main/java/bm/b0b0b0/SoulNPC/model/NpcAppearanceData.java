@@ -1,12 +1,15 @@
 package bm.b0b0b0.SoulNPC.model;
 
 import bm.b0b0b0.SoulNPC.mob.NpcEntityTypeResolver;
+import bm.b0b0b0.SoulNPC.appearance.NpcGlowColors;
 import net.elytrium.serializer.annotations.Comment;
 import net.elytrium.serializer.annotations.CommentValue;
 import net.elytrium.serializer.annotations.NewLine;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Comment(value = {
         @CommentValue(" Внешний вид NPC: тип модели, голограмма, размер, экипировка")
@@ -36,20 +39,20 @@ public final class NpcAppearanceData {
     })
     public NpcMobDisplayPose mobDisplayPose = NpcMobDisplayPose.STANDING;
 
-    /** @deprecated окрас лисы задаётся через entity-type: fox или fox_snow */
     @Deprecated
     public NpcFoxVariant foxVariant = NpcFoxVariant.RED;
 
     @NewLine
     @Comment(value = {
-            @CommentValue(" Голограмма (TextDisplay) — строки над NPC, MiniMessage")
+            @CommentValue(" Голограмма (TextDisplay) — строки над NPC, MiniMessage"),
+            @CommentValue(" Пример: \"<gradient:#7C3AED:#A855F7>Имя</gradient>\"")
     })
     public String name = "<white>NPC</white>";
 
     @Comment(value = {
-            @CommentValue(" Вторая строка голограммы")
+            @CommentValue(" Не показывать строку name в голограмме (текст сохраняется)")
     })
-    public String description = "";
+    public boolean nameHidden = false;
 
     @Comment(value = {
             @CommentValue(" Скин player NPC: ник, имя скина SkinRestorer (/skin set), URL"),
@@ -58,7 +61,27 @@ public final class NpcAppearanceData {
     public String profile = "";
 
     @Comment(value = {
-            @CommentValue(" true — строки через TextDisplay; false — nametag над головой пакетного игрока")
+            @CommentValue(" Источник скина: NICK, URL, FILE, MINESKIN_ID")
+    })
+    public NpcSkinSource skinSource = NpcSkinSource.NICK;
+
+    @Comment(value = {
+            @CommentValue(" URL скина (skinSource: URL)")
+    })
+    public String skinUrl = "";
+
+    @Comment(value = {
+            @CommentValue(" Файл скина в plugins/SoulNPC/skins/ (skinSource: FILE)")
+    })
+    public String skinFile = "";
+
+    @Comment(value = {
+            @CommentValue(" Маска частей скина (-1 = все; иначе byte mask)")
+    })
+    public int skinLayers = -1;
+
+    @Comment(value = {
+            @CommentValue(" Устарело: текст только через TextDisplay (значение в yaml игнорируется)")
     })
     public boolean useTextDisplay = true;
 
@@ -70,7 +93,7 @@ public final class NpcAppearanceData {
     @Comment(value = {
             @CommentValue(" Расстояние между строками голограммы (блоки)")
     })
-    public float hologramLineSpacing = 0.28F;
+    public float hologramLineSpacing = 0.10F;
 
     @Comment(value = {
             @CommentValue(" Примерная высота одной строки для стека (блоки)")
@@ -83,14 +106,14 @@ public final class NpcAppearanceData {
     public float nameDisplayScale = 1.0F;
 
     @Comment(value = {
-            @CommentValue(" Масштаб description и extra-lines")
+            @CommentValue(" Масштаб extra-lines (доп. строки голограммы)")
     })
     public float descriptionDisplayScale = 0.85F;
 
     @Comment(value = {
-            @CommentValue(" TextDisplay: сквозь блоки")
+            @CommentValue(" TextDisplay: текст виден сквозь блоки (false — скрывается за стенами, дефолт)")
     })
-    public boolean hologramSeeThrough = true;
+    public boolean hologramSeeThrough = false;
 
     @Comment(value = {
             @CommentValue(" TextDisplay: тень текста")
@@ -103,27 +126,29 @@ public final class NpcAppearanceData {
     public boolean hologramBackground = false;
 
     @Comment(value = {
-            @CommentValue(" Доп. строки голограммы (линия 3, 4, …), MiniMessage")
+            @CommentValue(" Доп. строки голограммы (настраиваются в GUI → «Строки»)")
     })
-    public List<String> extraLines = new ArrayList<>();
+    public List<NpcHologramLineData> extraLines = new ArrayList<>();
 
     @Deprecated
     public float nameDisplayOffset = 2.25F;
-    @Deprecated
-    public float descriptionDisplayOffset = 2.53F;
 
     @NewLine
     @Comment(value = {
-            @CommentValue(" Модель player NPC (для MOB — из профиля моба)")
+            @CommentValue(" Свечение контура модели (entity flag + цвет scoreboard team)")
     })
     public boolean glow = false;
+
+    @Comment(value = {
+            @CommentValue(" Цвет свечения: white, yellow, aqua, red, … (см. gui/glow-menu)")
+    })
+    public String glowColor = "white";
 
     @Comment(value = {
             @CommentValue(" Размер модели (1.0 = обычный; 0.5 ≈ small)")
     })
     public float scale = 1.0F;
 
-    /** @deprecated используй {@link #scale} */
     @Deprecated
     public boolean small = false;
 
@@ -143,6 +168,11 @@ public final class NpcAppearanceData {
     public boolean noGravity = true;
 
     @Comment(value = {
+            @CommentValue(" Игроки упираются в NPC (scoreboard collision); false — можно пройти сквозь")
+    })
+    public boolean collidable = false;
+
+    @Comment(value = {
             @CommentValue(" Marker hitbox (только для armor_stand-типа)")
     })
     public boolean marker = false;
@@ -158,6 +188,17 @@ public final class NpcAppearanceData {
     public NpcEquipmentSlotData boots = new NpcEquipmentSlotData();
     public NpcEquipmentSlotData mainHand = new NpcEquipmentSlotData();
     public NpcEquipmentSlotData offHand = new NpcEquipmentSlotData();
+
+    @NewLine
+    @Comment(value = {
+            @CommentValue(" MOB: свойства entity metadata (baby, fox_variant, sheep_color, …)")
+    })
+    public Map<String, String> mobProperties = new HashMap<>();
+
+    @Comment(value = {
+            @CommentValue(" MOB: экипировка (packet entity equipment)")
+    })
+    public NpcMobEquipmentData mobEquipment = new NpcMobEquipmentData();
 
     public float resolvedScale() {
         if (scale > 0.0F && Math.abs(scale - 1.0F) > 0.001F) {
@@ -183,6 +224,56 @@ public final class NpcAppearanceData {
         }
     }
 
+    public void normalizePresentation() {
+        useTextDisplay = true;
+        glowColor = NpcGlowColors.normalizeId(glowColor);
+        if (extraLines == null) {
+            extraLines = new ArrayList<>();
+        }
+    }
+
+    public void migrateLegacyDescription(String legacy) {
+        if (legacy == null || legacy.isBlank()) {
+            return;
+        }
+        ensureExtraLines();
+        if (extraLines.isEmpty()) {
+            extraLines.add(NpcHologramLineData.of(legacy));
+        }
+    }
+
+    public void ensureExtraLines() {
+        if (extraLines == null) {
+            extraLines = new ArrayList<>();
+        }
+    }
+
+    public void ensureExtraLine(int extraIndex) {
+        ensureExtraLines();
+        while (extraLines.size() <= extraIndex) {
+            extraLines.add(new NpcHologramLineData());
+        }
+        if (extraLines.get(extraIndex) == null) {
+            extraLines.set(extraIndex, new NpcHologramLineData());
+        }
+    }
+
+    public void migrateLegacyExtraLineStrings(java.util.List<String> legacyLines) {
+        if (legacyLines == null || legacyLines.isEmpty()) {
+            return;
+        }
+        ensureExtraLines();
+        if (!extraLines.isEmpty()) {
+            return;
+        }
+        for (String line : legacyLines) {
+            if (line == null || line.isBlank()) {
+                continue;
+            }
+            extraLines.add(NpcHologramLineData.of(line));
+        }
+    }
+
     public NpcFoxVariant legacyFoxVariant() {
         return foxVariant == null ? NpcFoxVariant.RED : foxVariant;
     }
@@ -205,6 +296,16 @@ public final class NpcAppearanceData {
         }
         if (offHand == null) {
             offHand = new NpcEquipmentSlotData();
+        }
+    }
+
+    public void ensureMobEquipment() {
+        if (mobEquipment == null) {
+            mobEquipment = new NpcMobEquipmentData();
+        }
+        mobEquipment.ensureSlots();
+        if (mobProperties == null) {
+            mobProperties = new HashMap<>();
         }
     }
 }

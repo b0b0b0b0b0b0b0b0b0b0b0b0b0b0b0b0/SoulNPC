@@ -1,12 +1,9 @@
 package bm.b0b0b0.SoulNPC.gui;
 
-import bm.b0b0b0.SoulNPC.config.PluginConfig;
 import bm.b0b0b0.SoulNPC.config.settings.GuiAdminSettings;
-import bm.b0b0b0.SoulNPC.lang.MessageService;
 import bm.b0b0b0.SoulNPC.model.NpcFileData;
-import bm.b0b0b0.SoulNPC.repository.NpcRepository;
-import bm.b0b0b0.SoulNPC.service.NpcService;
 import bm.b0b0b0.SoulNPC.util.NpcSkullProfileUtil;
+import bm.b0b0b0.SoulNPC.util.SoulNpcPermissionChecks;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
@@ -18,55 +15,29 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public final class AdminNpcMenu implements InventoryHolder {
+public final class AdminNpcMenu implements ClickableSoulNpcGui {
 
-    private final PluginConfig pluginConfig;
-    private final MessageService messageService;
-    private final NpcRepository repository;
-    private final NpcService npcService;
-    private final AdminNpcMenuListener adminMenuListener;
-    private final JavaPlugin plugin;
+    private final NpcEditGuiDependencies deps;
     private final int page;
     private final Inventory inventory;
     private final List<String> npcIds = new ArrayList<>();
     private int totalPages = 1;
     private int currentPage;
 
-    public AdminNpcMenu(
-            JavaPlugin plugin,
-            PluginConfig pluginConfig,
-            MessageService messageService,
-            NpcRepository repository,
-            NpcService npcService,
-            AdminNpcMenuListener adminMenuListener
-    ) {
-        this(plugin, pluginConfig, messageService, repository, npcService, adminMenuListener, 0);
+    public AdminNpcMenu(NpcEditGuiDependencies deps) {
+        this(deps, 0);
     }
 
-    public AdminNpcMenu(
-            JavaPlugin plugin,
-            PluginConfig pluginConfig,
-            MessageService messageService,
-            NpcRepository repository,
-            NpcService npcService,
-            AdminNpcMenuListener adminMenuListener,
-            int page
-    ) {
-        this.plugin = plugin;
-        this.pluginConfig = pluginConfig;
-        this.messageService = messageService;
-        this.repository = repository;
-        this.npcService = npcService;
-        this.adminMenuListener = adminMenuListener;
+    public AdminNpcMenu(NpcEditGuiDependencies deps, int page) {
+        this.deps = deps;
         this.page = Math.max(0, page);
-        GuiAdminSettings.Layout layout = pluginConfig.guiAdmin().layout;
-        this.inventory = Bukkit.createInventory(this, layout.size, messageService.guiTitle("gui.admin-title"));
+        GuiAdminSettings.Layout layout = deps.pluginConfig().guiAdmin().layout;
+        this.inventory = Bukkit.createInventory(this, layout.size, deps.messageService().guiTitle("gui.admin-title"));
         render(null);
     }
 
@@ -80,14 +51,19 @@ public final class AdminNpcMenu implements InventoryHolder {
         player.openInventory(inventory);
     }
 
-    public void handleClick(Player player, int slot, boolean rightClick) {
-        GuiAdminSettings.Layout layout = pluginConfig.guiAdmin().layout;
+    @Override
+    public void handleInventoryClick(Player player, GuiClickContext click) {
+        GuiAdminSettings.Layout layout = deps.pluginConfig().guiAdmin().layout;
+        int slot = click.slot();
         if (slot == layout.reloadSlot) {
-            player.sendMessage(messageService.message(player, "gui.reload-started"));
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                npcService.reload();
+            if (!SoulNpcPermissionChecks.requireAdmin(player, deps.pluginConfig(), deps.messageService())) {
+                return;
+            }
+            player.sendMessage(deps.messageService().message(player, "gui.reload-started"));
+            Bukkit.getScheduler().runTask(deps.plugin(), () -> {
+                deps.npcService().reload();
                 reopen(player, currentPage);
-                player.sendMessage(messageService.message(player, "gui.reload-done"));
+                player.sendMessage(deps.messageService().message(player, "gui.reload-done"));
             });
             return;
         }
@@ -105,11 +81,14 @@ public final class AdminNpcMenu implements InventoryHolder {
                 return;
             }
             String npcId = npcIds.get(index);
-            if (rightClick) {
-                adminMenuListener.openEdit(player, npcId);
+            if (!click.rightClick()) {
+                deps.menus().openEdit(player, npcId);
                 return;
             }
-            npcService.findRuntime(npcId).ifPresentOrElse(runtime -> {
+            if (!SoulNpcPermissionChecks.requireAdmin(player, deps.pluginConfig(), deps.messageService())) {
+                return;
+            }
+            deps.npcService().findRuntime(npcId).ifPresentOrElse(runtime -> {
                 Location target = new Location(
                         Bukkit.getWorld(runtime.data().world),
                         runtime.data().x,
@@ -119,34 +98,29 @@ public final class AdminNpcMenu implements InventoryHolder {
                         runtime.data().pitch
                 );
                 player.closeInventory();
-                player.teleportAsync(target);
-                player.sendMessage(messageService.message(player, "command.tp-success", Placeholder.parsed("npc", npcId)));
-            }, () -> player.sendMessage(messageService.message(player, "command.delete-missing", Placeholder.parsed("npc", npcId))));
+                player.teleportAsync(target).thenAccept(success -> {
+                    if (success) {
+                        player.sendMessage(deps.messageService().message(player, "command.tp-success", Placeholder.parsed("npc", npcId)));
+                    }
+                });
+            }, () -> player.sendMessage(deps.messageService().message(player, "command.delete-missing", Placeholder.parsed("npc", npcId))));
         }
     }
 
     private void reopen(Player player, int newPage) {
-        new AdminNpcMenu(
-                plugin,
-                pluginConfig,
-                messageService,
-                repository,
-                npcService,
-                adminMenuListener,
-                newPage
-        ).open(player);
+        new AdminNpcMenu(deps, newPage).open(player);
     }
 
     private void render(Player player) {
         inventory.clear();
         npcIds.clear();
-        GuiAdminSettings.Layout layout = pluginConfig.guiAdmin().layout;
+        GuiAdminSettings.Layout layout = deps.pluginConfig().guiAdmin().layout;
         ItemStack filler = pane(layout.fillerMaterial);
         for (int slot = 0; slot < layout.size; slot++) {
             inventory.setItem(slot, filler);
         }
 
-        List<NpcFileData> all = new ArrayList<>(repository.findAll());
+        List<NpcFileData> all = new ArrayList<>(deps.repository().findAll());
         all.sort(Comparator.comparing(data -> data.id.toLowerCase()));
 
         int pageSize = pageSize(layout);
@@ -182,15 +156,15 @@ public final class AdminNpcMenu implements InventoryHolder {
     }
 
     private ItemStack createNpcItem(Player player, NpcFileData data) {
-        GuiAdminSettings.Layout layout = pluginConfig.guiAdmin().layout;
+        GuiAdminSettings.Layout layout = deps.pluginConfig().guiAdmin().layout;
         Material material = NpcMenuIconUtil.materialFor(data, layout.npcMaterial);
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) {
             return item;
         }
-        meta.displayName(messageService.message(player, "gui.npc-entry-name", Placeholder.parsed("npc", data.id)));
-        meta.lore(messageService.messageList(
+        meta.displayName(deps.messageService().message(player, "gui.npc-entry-name", Placeholder.parsed("npc", data.id)));
+        meta.lore(deps.messageService().messageList(
                 player,
                 "gui.npc-entry-lore",
                 Placeholder.parsed("npc", data.id),
@@ -239,13 +213,13 @@ public final class AdminNpcMenu implements InventoryHolder {
         if (meta == null) {
             return item;
         }
-        meta.displayName(messageService.message(
+        meta.displayName(deps.messageService().message(
                 player,
                 namePath,
                 Placeholder.parsed("page", String.valueOf(pageNumber)),
                 Placeholder.parsed("pages", String.valueOf(pages))
         ));
-        meta.lore(messageService.messageList(
+        meta.lore(deps.messageService().messageList(
                 player,
                 lorePath,
                 Placeholder.parsed("page", String.valueOf(pageNumber)),
@@ -261,11 +235,11 @@ public final class AdminNpcMenu implements InventoryHolder {
         if (meta == null) {
             return item;
         }
-        meta.displayName(messageService.message(player, namePath));
+        meta.displayName(deps.messageService().message(player, namePath));
         if (lorePath != null) {
             List<Component> lore = new ArrayList<>();
-            for (String line : messageService.plainList(player, lorePath)) {
-                lore.add(messageService.raw(line));
+            for (String line : deps.messageService().plainList(player, lorePath)) {
+                lore.add(deps.messageService().raw(line));
             }
             meta.lore(lore);
         }

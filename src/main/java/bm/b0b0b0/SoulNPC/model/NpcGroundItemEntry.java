@@ -21,7 +21,6 @@ public final class NpcGroundItemEntry {
     })
     public int amount = 1;
 
-    /** @deprecated читается при загрузке старых npc.yml */
     @Deprecated
     public Material material;
 

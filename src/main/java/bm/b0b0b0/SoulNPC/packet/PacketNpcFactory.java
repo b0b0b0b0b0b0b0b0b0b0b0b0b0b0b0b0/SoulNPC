@@ -6,7 +6,6 @@ import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.protocol.world.Location;
 import com.github.retrooper.packetevents.util.Vector3d;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 
@@ -23,14 +22,8 @@ public final class PacketNpcFactory {
         NPC npc = new NPC(profile, data.entityId, Component.empty());
         npc.setLocation(toPacketLocation(data));
         npc.setTeamName("soulnpc-" + data.id);
-        if (!data.appearance.useTextDisplay) {
-            if (data.appearance.name != null && !data.appearance.name.isBlank()) {
-                npc.setPrefixName(MiniMessage.miniMessage().deserialize(data.appearance.name));
-            }
-            if (data.appearance.description != null && !data.appearance.description.isBlank()) {
-                npc.setSuffixName(MiniMessage.miniMessage().deserialize(data.appearance.description));
-            }
-        }
+        npc.setPrefixName(null);
+        npc.setSuffixName(null);
         return npc;
     }
 

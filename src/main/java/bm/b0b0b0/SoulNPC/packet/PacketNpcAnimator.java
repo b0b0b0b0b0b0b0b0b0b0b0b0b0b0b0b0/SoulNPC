@@ -43,7 +43,7 @@ public final class PacketNpcAnimator {
             case FALL_FLYING -> togglePose(runtime, NpcEntityPose.FALL_FLYING);
             case CROUCH -> togglePose(runtime, NpcEntityPose.CROUCHING);
             case SLEEP -> togglePose(runtime, NpcEntityPose.SLEEPING);
-            case SWIM -> togglePose(runtime, NpcEntityPose.SWIMMING);
+            case SWIM -> applySwimPose(runtime);
             case USE_MAIN_HAND -> toggleHandUse(runtime, true);
             case USE_OFF_HAND -> toggleHandUse(runtime, false);
         }
@@ -126,6 +126,14 @@ public final class PacketNpcAnimator {
         } else if (Math.abs(frame.leftArm.x) >= 20.0F || Math.abs(frame.leftArm.z) >= 20.0F) {
             swing(runtime, WrapperPlayServerEntityAnimation.EntityAnimationType.SWING_OFF_HAND);
         }
+    }
+
+    private void applySwimPose(NpcRuntime runtime) {
+        NPC npc = runtime.packetNpc();
+        if (npc == null) {
+            return;
+        }
+        PacketPlayerAppearance.applyPoseToViewers(npc, runtime.data().appearance, NpcEntityPose.SWIMMING);
     }
 
     private void togglePose(NpcRuntime runtime, NpcEntityPose pose) {

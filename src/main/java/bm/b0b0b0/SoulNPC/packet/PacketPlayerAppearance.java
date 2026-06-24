@@ -3,10 +3,12 @@ package bm.b0b0b0.SoulNPC.packet;
 import bm.b0b0b0.SoulNPC.model.NpcAppearanceData;
 import bm.b0b0b0.SoulNPC.model.NpcEntityPose;
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.attribute.Attributes;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
 import com.github.retrooper.packetevents.protocol.npc.NPC;
+import com.github.retrooper.packetevents.protocol.player.SkinSection;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUpdateAttributes;
 
@@ -20,10 +22,14 @@ public final class PacketPlayerAppearance {
     private static final int NO_GRAVITY_INDEX = 5;
     private static final int POSE_INDEX = 6;
     private static final int HAND_STATES_INDEX = 8;
+    private static final int SKIN_PARTS_INDEX_LEGACY = 17;
+    private static final int SKIN_PARTS_INDEX_AVATAR = 16;
 
     private static final byte FLAG_GLOWING = 0x40;
     private static final byte FLAG_INVISIBLE = 0x20;
+    private static final byte FLAG_SWIMMING = 0x10;
     private static final byte HAND_MAIN_ACTIVE = 0x01;
+    private static final byte SKIN_PARTS_ALL = SkinSection.ALL.getMask();
 
     private PacketPlayerAppearance() {
     }
@@ -89,14 +95,14 @@ public final class PacketPlayerAppearance {
             return List.of();
         }
         List<EntityData<?>> metadata = new ArrayList<>(4);
-        byte flags = entityFlags(appearance);
+        NpcEntityPose pose = resolvePose(appearance, poseOverride);
+        byte flags = entityFlags(appearance, pose);
         if (flags != 0) {
             metadata.add(new EntityData<>(FLAGS_INDEX, EntityDataTypes.BYTE, flags));
         }
         if (appearance.noGravity) {
             metadata.add(new EntityData<>(NO_GRAVITY_INDEX, EntityDataTypes.BOOLEAN, true));
         }
-        NpcEntityPose pose = resolvePose(appearance, poseOverride);
         metadata.add(new EntityData<>(
                 POSE_INDEX,
                 EntityDataTypes.ENTITY_POSE,
@@ -106,7 +112,31 @@ public final class PacketPlayerAppearance {
         if (effectiveHandState != null) {
             metadata.add(new EntityData<>(HAND_STATES_INDEX, EntityDataTypes.BYTE, effectiveHandState));
         }
+        metadata.add(new EntityData<>(
+                skinPartsIndex(),
+                EntityDataTypes.BYTE,
+                resolvedSkinParts(appearance)
+        ));
         return metadata;
+    }
+
+    private static byte resolvedSkinParts(NpcAppearanceData appearance) {
+        if (appearance == null || appearance.skinLayers < 0) {
+            return SKIN_PARTS_ALL;
+        }
+        return (byte) (appearance.skinLayers & 0xFF);
+    }
+
+    private static int skinPartsIndex() {
+        ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
+        if (version.isNewerThanOrEquals(ServerVersion.V_1_21_9)) {
+            return SKIN_PARTS_INDEX_AVATAR;
+        }
+        return SKIN_PARTS_INDEX_LEGACY;
+    }
+
+    static int currentSkinPartsIndex() {
+        return skinPartsIndex();
     }
 
     private static Byte resolveHandState(NpcEntityPose pose, Byte handState) {
@@ -139,13 +169,16 @@ public final class PacketPlayerAppearance {
                 && appearance.entityPose == NpcEntityPose.SITTING;
     }
 
-    private static byte entityFlags(NpcAppearanceData appearance) {
+    private static byte entityFlags(NpcAppearanceData appearance, NpcEntityPose pose) {
         byte flags = 0;
         if (appearance.glow) {
             flags |= FLAG_GLOWING;
         }
         if (appearance.invisible) {
             flags |= FLAG_INVISIBLE;
+        }
+        if (pose == NpcEntityPose.SWIMMING) {
+            flags |= FLAG_SWIMMING;
         }
         return flags;
     }

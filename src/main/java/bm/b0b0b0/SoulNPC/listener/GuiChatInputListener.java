@@ -16,11 +16,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class GuiChatInputListener implements Listener {
 
-    private final JavaPlugin plugin;
     private final GuiChatInputService chatInputService;
 
-    public GuiChatInputListener(JavaPlugin plugin, GuiChatInputService chatInputService) {
-        this.plugin = plugin;
+    public GuiChatInputListener(GuiChatInputService chatInputService) {
         this.chatInputService = chatInputService;
     }
 
@@ -43,6 +41,7 @@ public final class GuiChatInputListener implements Listener {
         event.setCancelled(true);
         event.viewers().clear();
         if (event.isAsynchronous()) {
+            JavaPlugin plugin = JavaPlugin.getProvidingPlugin(GuiChatInputListener.class);
             Bukkit.getScheduler().runTask(plugin, () -> chatInputService.submit(player, text));
         } else {
             chatInputService.submit(player, text);

@@ -9,7 +9,6 @@ import bm.b0b0b0.SoulNPC.packet.PacketNpcViewerService;
 import bm.b0b0b0.SoulNPC.repository.NpcRepository;
 import bm.b0b0b0.SoulNPC.util.NpcEntityIds;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -116,6 +115,10 @@ public final class NpcSpawnService {
         hologramEntityIndex.remove(entityId);
     }
 
+    public void bootstrapLoadedNpcs() {
+        registerAllEnabled();
+    }
+
     public void reloadAll() {
         viewerService.despawnAll(runtimes.values());
         textLabels.removeAll(runtimes.values());
@@ -123,8 +126,7 @@ public final class NpcSpawnService {
         runtimes.clear();
         entityIndex.clear();
         hologramEntityIndex.clear();
-        repository.reload();
-        plugin.getServer().getScheduler().runTask(plugin, this::registerAllEnabled);
+        repository.reload(this::registerAllEnabled);
     }
 
     private void registerAllEnabled() {
@@ -140,6 +142,7 @@ public final class NpcSpawnService {
     }
 
     public void register(NpcFileData data) {
+        data.appearance.normalizePresentation();
         data.entityId = NpcEntityIds.resolve(data.id, data.entityId);
         NpcRuntime runtime = new NpcRuntime(data);
         runtimes.put(normalize(data.id), runtime);
@@ -229,6 +232,7 @@ public final class NpcSpawnService {
 
     public void onPlayerQuit(Player player) {
         for (NpcRuntime runtime : runtimes.values()) {
+            textLabels.hideFromPlayer(player, runtime);
             viewerService.hideFrom(player, runtime);
         }
     }
@@ -246,6 +250,14 @@ public final class NpcSpawnService {
             textLabels.spawn(runtime);
             viewerService.showToNearbyPlayers(runtime);
         });
+    }
+
+    public void refreshEquipment(String id) {
+        findRuntime(id).ifPresent(viewerService::refreshEquipment);
+    }
+
+    public void refreshGlow(String id) {
+        findRuntime(id).ifPresent(viewerService::refreshGlow);
     }
 
     public void relocate(String id) {

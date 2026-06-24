@@ -1,6 +1,7 @@
 name: SoulNPC
 version: '${version}'
 main: bm.b0b0b0.SoulNPC.soulNPC.SoulNPC
+load: STARTUP
 api-version: '1.21'
 authors: [ b0b0b0 ]
 depend:
@@ -11,15 +12,18 @@ softdepend:
   - ViaRewind
   - Geyser-Spigot
   - SkinsRestorer
+  - PlaceholderAPI
 libraries:
   - net.elytrium:serializer:1.1.1
+  - com.zaxxer:HikariCP:5.1.0
+  - org.xerial:sqlite-jdbc:3.46.1.0
+  - com.mysql:mysql-connector-j:8.4.0
 
 commands:
   soulnpc:
     description: SoulNPC administration
     usage: /soulnpc <create|delete|edit|list|reload|tp|info|respawn|skin|stick> ...
     aliases: [ snpc, npc ]
-    permission: soulnpc.admin
 
 permissions:
   soulnpc.admin:

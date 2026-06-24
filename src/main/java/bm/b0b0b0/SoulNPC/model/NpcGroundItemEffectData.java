@@ -3,7 +3,6 @@ package bm.b0b0b0.SoulNPC.model;
 import net.elytrium.serializer.annotations.Comment;
 import net.elytrium.serializer.annotations.CommentValue;
 import net.elytrium.serializer.annotations.NewLine;
-import org.bukkit.Material;
 
 import java.util.ArrayList;
 import java.util.List;

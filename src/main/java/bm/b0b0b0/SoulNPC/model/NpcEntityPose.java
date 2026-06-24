@@ -69,10 +69,6 @@ public enum NpcEntityPose {
         return PLAYER_MOB_POSES;
     }
 
-    public static List<NpcEntityPose> playerGuiPoses() {
-        return PLAYER_GUI_POSES;
-    }
-
     public static NpcEntityPose nextPlayerGuiPose(NpcEntityPose current, boolean reverse) {
         List<NpcEntityPose> poses = PLAYER_GUI_POSES;
         int index = poses.indexOf(current);

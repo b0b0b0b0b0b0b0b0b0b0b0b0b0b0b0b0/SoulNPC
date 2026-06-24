@@ -23,6 +23,7 @@ public final class PluginConfig {
         Path dataFolder = plugin.getDataFolder().toPath();
         SoulNpcSettings settings = new SoulNpcSettings();
         settings.reload(dataFolder.resolve("config.yml"));
+        mergeLegacyStorage(settings);
 
         Path guiFolder = dataFolder.resolve("gui");
         guiFolder.toFile().mkdirs();
@@ -38,6 +39,7 @@ public final class PluginConfig {
     public void reload(JavaPlugin plugin) {
         Path dataFolder = plugin.getDataFolder().toPath();
         settings.reload(dataFolder.resolve("config.yml"));
+        mergeLegacyStorage(settings);
         guiAdminSettings.reload(dataFolder.resolve("gui").resolve("admin.yml"));
         guiNpcEditSettings.reload(dataFolder.resolve("gui").resolve("npc-edit.yml"));
     }
@@ -52,5 +54,22 @@ public final class PluginConfig {
 
     public GuiNpcEditSettings guiNpcEdit() {
         return guiNpcEditSettings;
+    }
+
+    public String yamlNpcFolder() {
+        String folder = settings.storage.yaml.folder;
+        if (folder == null || folder.isBlank()) {
+            folder = settings.general.npcFolder;
+        }
+        return folder == null || folder.isBlank() ? "npcs" : folder;
+    }
+
+    private static void mergeLegacyStorage(SoulNpcSettings settings) {
+        if (settings.storage.yaml.folder == null || settings.storage.yaml.folder.isBlank()) {
+            settings.storage.yaml.folder = settings.general.npcFolder;
+        }
+        if (settings.general.npcFolder == null || settings.general.npcFolder.isBlank()) {
+            settings.general.npcFolder = settings.storage.yaml.folder;
+        }
     }
 }

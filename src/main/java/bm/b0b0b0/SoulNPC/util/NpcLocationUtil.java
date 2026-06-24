@@ -8,7 +8,6 @@ public final class NpcLocationUtil {
     private NpcLocationUtil() {
     }
 
-    /** Точная позиция игрока — packet-NPC не физический, Y не привязан к земле. */
     public static Location createAtPlayer(Player player) {
         Location source = player.getLocation();
         Location spawn = source.clone();

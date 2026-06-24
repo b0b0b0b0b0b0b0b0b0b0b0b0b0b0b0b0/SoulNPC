@@ -1,11 +1,8 @@
 package bm.b0b0b0.SoulNPC.model;
 
 public enum NpcMobDisplayPose {
-    /** Обычная стойка (тихоня стоит, летучая мышь летит). */
     STANDING,
-    /** На спину (тихоня и похожие — EntityPose.SLEEPING). */
     ON_BACK,
-    /** Вниз головой / висит (летучая мышь — флаг hanging). */
     HANGING;
 
     public static NpcMobDisplayPose fromString(String value) {

@@ -120,7 +120,6 @@ public final class NpcMobProfile {
         return sleepingHeadLookOnly;
     }
 
-    /** Цикл MOB_POSE в анимации — только у мобов с явным профилем (лиса, волк, …). */
     public boolean mobPoseAnimation() {
         return mobPoseAnimation;
     }

@@ -18,9 +18,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Невидимая стойка для позы SITTING у player NPC — клиент не рисует сидение только по EntityPose.
- */
 public final class PacketPlayerSeat {
 
     private static final int ENTITY_FLAGS_INDEX = 0;
@@ -32,14 +29,12 @@ public final class PacketPlayerSeat {
     private static final byte STAND_FLAG_MARKER = 0x10;
 
     private final int seatEntityId;
-    private final UUID seatUuid;
     private final NpcFileData data;
     private final Set<Object> spawnedChannels = new HashSet<>();
 
     public PacketPlayerSeat(NpcFileData data) {
         this.data = data;
         this.seatEntityId = NpcEntityIds.seatFor(data.id, data.entityId);
-        this.seatUuid = NpcUuids.forNpcSeat(data.id);
     }
 
     public int seatEntityId() {
@@ -55,6 +50,7 @@ public final class PacketPlayerSeat {
             return;
         }
         Location location = seatLocation();
+        UUID seatUuid = NpcUuids.forNpcSeat(data.id);
         WrapperPlayServerSpawnEntity spawn = new WrapperPlayServerSpawnEntity(
                 seatEntityId,
                 seatUuid,
