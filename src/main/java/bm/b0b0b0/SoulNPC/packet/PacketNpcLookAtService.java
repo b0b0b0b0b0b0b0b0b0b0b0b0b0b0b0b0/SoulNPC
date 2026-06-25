@@ -27,6 +27,7 @@ public final class PacketNpcLookAtService {
                 continue;
             }
             if (!data.lookAtPlayers) {
+                holdRestRotation(runtime);
                 continue;
             }
             World world = Bukkit.getWorld(data.world);
@@ -52,14 +53,23 @@ public final class PacketNpcLookAtService {
     }
 
     public void smoothToBase(NpcRuntime runtime, float smoothFactor) {
-        NpcFileData data = runtime.data();
-        float basePitch = mobBasePitch(data);
-        float[] smoothed = runtime.smoothLookToward(data.yaw, basePitch, smoothFactor);
+        float baseYaw = runtime.restYaw();
+        float basePitch = runtime.restPitch();
+        float yawDelta = Math.abs(NpcLookAtUtil.wrapDegrees(baseYaw - runtime.currentLookYaw()));
+        float pitchDelta = Math.abs(basePitch - runtime.currentLookPitch());
+        if (yawDelta < 0.75F && pitchDelta < 0.75F) {
+            holdRestRotation(runtime);
+            return;
+        }
+        float[] smoothed = runtime.smoothLookToward(baseYaw, basePitch, smoothFactor);
         applyRotation(runtime, smoothed[0], smoothed[1]);
     }
 
-    private static float mobBasePitch(NpcFileData data) {
-        return PacketPlayerSwimSupport.swimBasePitch(data);
+    private void holdRestRotation(NpcRuntime runtime) {
+        float baseYaw = runtime.restYaw();
+        float basePitch = runtime.restPitch();
+        runtime.setLookRotation(baseYaw, basePitch);
+        applyRotation(runtime, baseYaw, basePitch);
     }
 
     public float greetTurnSmooth() {

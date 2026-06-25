@@ -18,9 +18,8 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDe
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityHeadLook;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityRotation;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityTeleport;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSpawnEntity;
-import org.bukkit.Bukkit;
-import org.bukkit.World;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -118,9 +117,28 @@ public final class PacketMobNpc {
         }
     }
 
+    public void teleportToData() {
+        teleport(spawnLocation());
+    }
+
+    public void teleport(Location location) {
+        if (location == null || spawnedChannels.isEmpty()) {
+            return;
+        }
+        WrapperPlayServerEntityTeleport teleport = new WrapperPlayServerEntityTeleport(
+                entityId,
+                location.getPosition(),
+                location.getYaw(),
+                location.getPitch(),
+                false
+        );
+        for (Object channel : spawnedChannels) {
+            PacketEvents.getAPI().getProtocolManager().sendPacket(channel, teleport);
+        }
+    }
+
     public void updateRotation(float yaw, float pitch) {
-        World world = Bukkit.getWorld(data.world);
-        if (world == null) {
+        if (spawnedChannels.isEmpty()) {
             return;
         }
         if (isHeadLookOnly()) {

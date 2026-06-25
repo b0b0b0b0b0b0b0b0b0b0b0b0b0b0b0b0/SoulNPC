@@ -44,6 +44,7 @@ command:
   skin-success: "<prefix><green>Скин NPC <yellow><npc></yellow> → <white><profile></white></green>"
   skin-failed: "<prefix><red>Не удалось загрузить скин <white><profile></white> для NPC <yellow><npc></yellow>: <reason></red>"
   skin-not-player: "<prefix><red>У NPC <yellow><npc></yellow> тип MOB — скин только для player-модели.</red>"
+  skin-invalid-nick: "<prefix><red>Ник Minecraft — от 3 до <max> символов (<nick> = <length>). Для длинных имён: <cmd:'/soulnpc skin <id> url <url>':gray></red>"
   stick-given: "<prefix><green>Палка инспектора выдана. Ударьте ЛКМ по NPC — ID в чате.</green>"
   import-usage: "<prefix><gray>/soulnpc import znpcsplus [путь]</gray>"
   import-started: "<prefix><gray>Импорт ZNPCsPlus из <path>…</gray>"

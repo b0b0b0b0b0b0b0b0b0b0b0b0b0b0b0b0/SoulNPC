@@ -63,7 +63,7 @@ public final class NpcLookAtUtil {
         return from + delta * factor;
     }
 
-    static float wrapDegrees(float degrees) {
+    public static float wrapDegrees(float degrees) {
         float wrapped = degrees % 360.0F;
         if (wrapped >= 180.0F) {
             wrapped -= 360.0F;

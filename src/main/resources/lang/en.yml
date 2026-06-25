@@ -44,6 +44,7 @@ command:
   skin-success: "<prefix><green>NPC <yellow><npc></yellow> skin → <white><profile></white></green>"
   skin-failed: "<prefix><red>Failed to load skin <white><profile></white> for NPC <yellow><npc></yellow>: <reason></red>"
   skin-not-player: "<prefix><red>NPC <yellow><npc></yellow> is MOB type — skin applies to player model only.</red>"
+  skin-invalid-nick: "<prefix><red>Minecraft username must be 3–<max> characters (<nick> = <length>). For longer names use <cmd:'/soulnpc skin <id> url <url>':gray></red>"
   stick-given: "<prefix><green>Inspector stick given. Left-click an NPC to see its ID.</green>"
   import-usage: "<prefix><gray>/soulnpc import znpcsplus [path]</gray>"
   import-started: "<prefix><gray>Importing ZNPCsPlus from <path>…</gray>"

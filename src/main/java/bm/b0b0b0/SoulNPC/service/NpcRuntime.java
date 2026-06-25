@@ -213,14 +213,40 @@ public final class NpcRuntime {
     }
 
     public void resetLookRotation() {
-        lookYaw = data.yaw;
-        lookPitch = PacketPlayerSwimSupport.swimBasePitch(data);
+        lookYaw = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.wrapDegrees(data.yaw);
+        lookPitch = restPitch();
         lookInitialized = true;
+    }
+
+    public void setLookRotation(float yaw, float pitch) {
+        lookYaw = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.wrapDegrees(yaw);
+        lookPitch = Math.max(-90.0F, Math.min(90.0F, pitch));
+        lookInitialized = true;
+    }
+
+    public void captureLookRotationToData() {
+        data.yaw = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.wrapDegrees(currentLookYaw());
+        if (data.appearance.type.isPlayerModel() && data.appearance.entityPose != NpcEntityPose.SWIMMING) {
+            data.pitch = currentLookPitch();
+        }
+    }
+
+    public float restYaw() {
+        return bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.wrapDegrees(data.yaw);
+    }
+
+    public float restPitch() {
+        return PacketPlayerSwimSupport.swimBasePitch(data);
     }
 
     public float[] smoothLookToward(float targetYaw, float targetPitch, float factor) {
         initLookIfNeeded();
-        lookYaw = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.lerpAngle(lookYaw, targetYaw, factor);
+        lookYaw = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.lerpAngle(
+                lookYaw,
+                bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.wrapDegrees(targetYaw),
+                factor
+        );
+        lookYaw = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.wrapDegrees(lookYaw);
         lookPitch = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.lerp(lookPitch, targetPitch, factor);
         lookPitch = Math.max(-90.0F, Math.min(90.0F, lookPitch));
         return new float[]{lookYaw, lookPitch};
@@ -238,8 +264,8 @@ public final class NpcRuntime {
 
     private void initLookIfNeeded() {
         if (!lookInitialized) {
-            lookYaw = data.yaw;
-            lookPitch = PacketPlayerSwimSupport.swimBasePitch(data);
+            lookYaw = bm.b0b0b0.SoulNPC.packet.NpcLookAtUtil.wrapDegrees(data.yaw);
+            lookPitch = restPitch();
             lookInitialized = true;
         }
     }

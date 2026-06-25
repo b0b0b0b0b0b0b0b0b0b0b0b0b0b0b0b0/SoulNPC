@@ -1,6 +1,8 @@
 package bm.b0b0b0.SoulNPC.command;
 
+import bm.b0b0b0.SoulNPC.appearance.InvalidSkinUsernameException;
 import bm.b0b0b0.SoulNPC.appearance.SkinService;
+import bm.b0b0b0.SoulNPC.appearance.SkinUsernameRules;
 import bm.b0b0b0.SoulNPC.config.PluginConfig;
 import bm.b0b0b0.SoulNPC.gui.AdminNpcMenuListener;
 import bm.b0b0b0.SoulNPC.gui.GuiChatInputService;
@@ -395,6 +397,10 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ctx.messageService().message(player, "command.skin-usage"));
             return true;
         }
+        if (!SkinUsernameRules.isValidMojangUsername(profile) && !ctx.skinService().hasSkinRestorer()) {
+            sendInvalidSkinUsername(player, profile);
+            return true;
+        }
         return applySkin(player, id, NpcSkinSource.NICK, profile, "", "", profile);
     }
 
@@ -418,18 +424,34 @@ public final class SoulNpcCommand implements CommandExecutor, TabCompleter {
                 "command.skin-success",
                 Placeholder.parsed("npc", id),
                 Placeholder.parsed("profile", displayLabel)
-        )), error -> player.sendMessage(ctx.messageService().message(
-                player,
-                "command.skin-failed",
-                Placeholder.parsed("npc", id),
-                Placeholder.parsed("profile", displayLabel),
-                Placeholder.parsed("reason", error.getMessage() == null ? "?" : error.getMessage())
-        )))) {
+        )), error -> {
+            if (error instanceof InvalidSkinUsernameException invalid) {
+                sendInvalidSkinUsername(player, invalid.username().isBlank() ? displayLabel : invalid.username());
+                return;
+            }
+            player.sendMessage(ctx.messageService().message(
+                    player,
+                    "command.skin-failed",
+                    Placeholder.parsed("npc", id),
+                    Placeholder.parsed("profile", displayLabel),
+                    Placeholder.parsed("reason", error.getMessage() == null ? "?" : error.getMessage())
+            ));
+        })) {
             player.sendMessage(ctx.messageService().message(player, "command.skin-failed", Placeholder.parsed("npc", id),
                     Placeholder.parsed("profile", displayLabel), Placeholder.parsed("reason", "respawn")));
             return true;
         }
         return true;
+    }
+
+    private void sendInvalidSkinUsername(Player player, String nick) {
+        player.sendMessage(ctx.messageService().message(
+                player,
+                "command.skin-invalid-nick",
+                Placeholder.parsed("nick", nick),
+                Placeholder.parsed("length", String.valueOf(nick.length())),
+                Placeholder.parsed("max", String.valueOf(SkinUsernameRules.MAX_LENGTH))
+        ));
     }
 
     private boolean handleImport(CommandSender sender, String[] args) {

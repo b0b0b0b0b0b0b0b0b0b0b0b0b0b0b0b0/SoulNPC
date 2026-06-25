@@ -195,8 +195,17 @@ public final class NpcService {
             return;
         }
         NpcFileData data = optional.get();
-        data.lookAtPlayers = !data.lookAtPlayers;
+        boolean wasEnabled = data.lookAtPlayers;
+        deps.spawnService().findRuntime(id).ifPresent(runtime -> {
+            if (wasEnabled) {
+                runtime.captureLookRotationToData();
+            } else {
+                runtime.resetLookRotation();
+            }
+        });
+        data.lookAtPlayers = !wasEnabled;
         deps.repository().save(data);
+        deps.spawnService().syncLookRotation(id);
     }
 
     public void cyclePlayerEntityPose(String id, boolean reverse) {

@@ -23,6 +23,10 @@ public final class SkinService {
         return skinRestorerHook.tryInit();
     }
 
+    public boolean hasSkinRestorer() {
+        return skinRestorerHook.isAvailable();
+    }
+
     public String resolveProfileKeyForPlayer(Player player) {
         return skinRestorerHook.resolveProfileKey(player);
     }
@@ -88,13 +92,13 @@ public final class SkinService {
             plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
                 skinRestorerHook.resolveOfflineProfile(name).ifPresentOrElse(
                         profile -> deliverProfile(profile, onReady),
-                        () -> resolveViaMojang(name, onReady, onError)
+                        () -> resolveViaMojangOrReport(name, onReady, onError)
                 );
             });
             return;
         }
 
-        resolveViaMojang(name, onReady, onError);
+        resolveViaMojangOrReport(name, onReady, onError);
     }
 
     private void resolveOnlinePlayer(Player player, Consumer<PlayerProfile> onReady, Consumer<Throwable> onError) {
@@ -115,14 +119,38 @@ public final class SkinService {
         plugin.getServer().getScheduler().runTask(plugin, () -> onReady.accept(profile));
     }
 
+    private void resolveViaMojangOrReport(String name, Consumer<PlayerProfile> onReady, Consumer<Throwable> onError) {
+        if (!SkinUsernameRules.isValidMojangUsername(name)) {
+            reportError(onError, SkinUsernameRules.invalid(name));
+            return;
+        }
+        resolveViaMojang(name, onReady, onError);
+    }
+
     private void resolveViaMojang(String name, Consumer<PlayerProfile> onReady, Consumer<Throwable> onError) {
-        PlayerProfile profile = Bukkit.createProfile(name);
+        final PlayerProfile profile;
+        try {
+            profile = Bukkit.createProfile(name);
+        } catch (IllegalArgumentException exception) {
+            reportError(onError, exception);
+            return;
+        }
         profile.update().whenComplete((updated, error) -> plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (error != null) {
-                onError.accept(error);
+                if (onError != null) {
+                    onError.accept(error);
+                }
                 return;
             }
             onReady.accept(updated);
         }));
+    }
+
+    private void reportError(Consumer<Throwable> onError, Throwable error) {
+        if (onError == null) {
+            plugin.getLogger().warning("[SoulNPC] Skin resolve failed: " + error.getMessage());
+            return;
+        }
+        plugin.getServer().getScheduler().runTask(plugin, () -> onError.accept(error));
     }
 }

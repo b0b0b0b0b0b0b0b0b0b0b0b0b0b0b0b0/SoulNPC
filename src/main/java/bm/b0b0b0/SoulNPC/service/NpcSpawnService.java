@@ -171,6 +171,7 @@ public final class NpcSpawnService {
             registerEntityAliases(runtime);
             animationService.onMobSpawned(runtime);
         }
+        syncLookRotation(runtime);
     }
 
     public void createRuntime(NpcFileData data) {
@@ -269,16 +270,44 @@ public final class NpcSpawnService {
         findRuntime(id).ifPresent(viewerService::refreshGlow);
     }
 
+    public void syncLookRotation(String id) {
+        findRuntime(id).ifPresent(this::syncLookRotation);
+    }
+
+    private void syncLookRotation(NpcRuntime runtime) {
+        NpcFileData data = runtime.data();
+        float yaw = runtime.restYaw();
+        float pitch = runtime.restPitch();
+        runtime.setLookRotation(yaw, pitch);
+        if (runtime.packetMob() != null) {
+            runtime.packetMob().updateRotation(yaw, pitch);
+            return;
+        }
+        if (runtime.packetNpc() != null) {
+            var packetLocation = bm.b0b0b0.SoulNPC.packet.PacketNpcFactory.toPacketLocation(data);
+            packetLocation = new com.github.retrooper.packetevents.protocol.world.Location(
+                    packetLocation.getPosition(),
+                    yaw,
+                    pitch
+            );
+            runtime.packetNpc().setLocation(packetLocation);
+            runtime.packetNpc().updateRotation(yaw, pitch);
+        }
+    }
+
     public void relocate(String id) {
         findRuntime(id).ifPresent(runtime -> {
             NpcFileData data = runtime.data();
+            runtime.resetLookRotation();
             if (runtime.packetMob() != null) {
+                runtime.packetMob().teleportToData();
                 runtime.packetMob().updateRotation(data.yaw, data.pitch);
             } else if (runtime.packetNpc() != null) {
                 var packetLocation = bm.b0b0b0.SoulNPC.packet.PacketNpcFactory.toPacketLocation(data);
                 runtime.packetNpc().setLocation(packetLocation);
                 runtime.packetNpc().teleport(packetLocation);
             }
+            syncLookRotation(runtime);
             textLabels.spawn(runtime);
             viewerService.showToNearbyPlayers(runtime);
         });
