@@ -146,6 +146,9 @@ public final class NpcTextLabels {
     }
 
     private void applyHologramVisibility(Player player, NpcRuntime runtime, boolean visible) {
+        if (!plugin.isEnabled()) {
+            return;
+        }
         for (UUID displayId : runtime.hologramDisplayIds()) {
             Entity entity = Bukkit.getEntity(displayId);
             if (entity == null) {

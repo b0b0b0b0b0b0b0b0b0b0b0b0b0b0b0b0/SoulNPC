@@ -14,17 +14,22 @@ final class GuiInventorySupport {
     private GuiInventorySupport() {
     }
 
-    static Player guardEditClick(InventoryClickEvent event, PluginConfig pluginConfig, MessageService messageService) {
-        event.setCancelled(true);
+    static Player guardEditPlayer(InventoryClickEvent event, PluginConfig pluginConfig, MessageService messageService) {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return null;
         }
         if (!SoulNpcPermissionChecks.hasEditGui(player, pluginConfig)) {
+            event.setCancelled(true);
             player.closeInventory();
             player.sendMessage(messageService.message(player, "command.no-permission"));
             return null;
         }
         return player;
+    }
+
+    static Player guardEditClick(InventoryClickEvent event, PluginConfig pluginConfig, MessageService messageService) {
+        event.setCancelled(true);
+        return guardEditPlayer(event, pluginConfig, messageService);
     }
 
     static boolean isClickedHolder(InventoryClickEvent event, InventoryHolder holder) {

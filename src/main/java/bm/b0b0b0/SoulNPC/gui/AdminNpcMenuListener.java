@@ -50,7 +50,7 @@ public final class AdminNpcMenuListener implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (event.getInventory().getHolder(false) instanceof NpcDressMenu dressMenu) {
-            Player player = GuiInventorySupport.guardEditClick(
+            Player player = GuiInventorySupport.guardEditPlayer(
                     event,
                     editGuiDeps.pluginConfig(),
                     editGuiDeps.messageService()
@@ -108,6 +108,24 @@ public final class AdminNpcMenuListener implements Listener {
 
     @EventHandler
     public void onDrag(InventoryDragEvent event) {
+        if (event.getInventory().getHolder(false) instanceof NpcDressMenu dressMenu) {
+            if (!(event.getWhoClicked() instanceof Player player)) {
+                event.setCancelled(true);
+                return;
+            }
+            if (!SoulNpcPermissionChecks.hasEditGui(player, editGuiDeps.pluginConfig())) {
+                event.setCancelled(true);
+                return;
+            }
+            int topSize = event.getView().getTopInventory().getSize();
+            for (int rawSlot : event.getRawSlots()) {
+                if (rawSlot >= 0 && rawSlot < topSize && !dressMenu.isEquipmentSlot(rawSlot)) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+            return;
+        }
         if (event.getInventory().getHolder(false) instanceof SoulNpcGui) {
             event.setCancelled(true);
         }
